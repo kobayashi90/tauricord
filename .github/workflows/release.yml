@@ -38,14 +38,11 @@ jobs:
 build-windows:
     name: Build for Windows (NSIS)
     runs-on: windows-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
-
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
@@ -54,17 +51,14 @@ build-windows:
             ${{ env.USERPROFILE }}\.cargo\git
           key: windows-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: windows-cargo-registry-
-
       - name: Cache cargo build
         uses: actions/cache@v4
         with:
           path: target
           key: windows-cargo-build-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: windows-cargo-build-
-
       - name: Build Tauri app (Windows)
         run: cargo tauri build
-
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
