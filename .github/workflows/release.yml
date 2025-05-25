@@ -66,6 +66,9 @@ jobs:
       - name: Set up Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --force
+
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
