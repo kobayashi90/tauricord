@@ -62,7 +62,7 @@ jobs:
         with:
           name: windows-artifacts
           path: |
-            src-tauri/target/release/bundle/
+            target/release/bundle/
 
   release:
     name: Create GitHub Release
