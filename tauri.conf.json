@@ -21,6 +21,10 @@
       "csp": null
     }
   },
+  "plugins": {
+    "fs": {},
+    "dialog": {}
+  },
   "bundle": {
   "active": true,
   "targets": ["deb","nsis"],
