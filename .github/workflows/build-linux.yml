@@ -7,9 +7,11 @@ on:
   pull_request:
 
 jobs:
-  build-linux:
-    name: Build for Linux (AppImage)
+  build-linux-docker:
+    name: Build Linux in Docker
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/tauri-apps/tauri-build-image:latest  # offizielles Tauri Docker Build Image mit allen Dependencies
 
     steps:
       - name: Checkout repository
@@ -17,11 +19,6 @@ jobs:
 
       - name: Set up Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@stable
-
-      - name: Install Linux dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.0-dev build-essential curl wget libssl-dev libgtk-3-dev squashfs-tools
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -56,5 +53,3 @@ jobs:
           name: linux-artifacts
           path: target/release/bundle/appimage/*.AppImage
           if-no-files-found: warn
-          
-  # Du kannst analog den Windows-Job anpassen und dort ebenfalls Node.js + npm nutzen
