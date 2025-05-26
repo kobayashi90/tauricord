@@ -1,4 +1,4 @@
-name: Flatpak Build
+name: Tauri Flatpak Build
 
 on:
   push:
