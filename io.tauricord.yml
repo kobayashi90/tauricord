@@ -1,0 +1,23 @@
+app-id: io.tauricord.dev
+runtime: org.freedesktop.Platform
+runtime-version: "22.08"
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - rust-stable
+command: tauricord
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --filesystem=host
+
+modules:
+  - name: tauricord
+    buildsystem: simple
+    build-commands:
+      - cargo build --release
+      - install -Dm755 target/release/tauricord /app/bin/tauricord
+    sources:
+      - type: dir
+        path: .
