@@ -2,8 +2,6 @@ app-id: io.tauricord.dev
 runtime: org.freedesktop.Platform
 runtime-version: "22.08"
 sdk: org.freedesktop.Sdk
-sdk-extensions:
-  - rust-stable
 command: tauricord
 finish-args:
   - --share=network
@@ -16,6 +14,8 @@ modules:
   - name: tauricord
     buildsystem: simple
     build-commands:
+      - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+      - source $HOME/.cargo/env
       - cargo build --release
       - install -Dm755 target/release/tauricord /app/bin/tauricord
     sources:
