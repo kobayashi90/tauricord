@@ -25,9 +25,9 @@ jobs:
 
       - name: Install SDKs
         run: |
-          flatpak install -y --user flathub org.freedesktop.Platform//24.08
-          flatpak install -y --user flathub org.freedesktop.Sdk//24.08
-          flatpak install -y --user flathub org.freedesktop.Sdk.Extension.rust-stable//24.08
+          flatpak install -y --user flathub org.freedesktop.Platform//22.08
+          flatpak install -y --user flathub org.freedesktop.Sdk//22.08
+          flatpak install -y --user flathub org.freedesktop.Sdk.Extension.rust-stable//22.08
 
       - name: Build Flatpak app
         run: |
