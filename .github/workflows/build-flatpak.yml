@@ -1,0 +1,45 @@
+name: Tauri Flatpak Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-flatpak:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Set up Flatpak
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder curl
+
+      - name: Add Flathub remote
+        run: |
+          flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+      - name: Install SDKs
+        run: |
+          flatpak install -y flathub org.freedesktop.Platform//23.08
+          flatpak install -y flathub org.freedesktop.Sdk//23.08
+          flatpak install -y flathub org.freedesktop.Sdk.Extension.rust-stable//23.08
+
+      - name: Build Flatpak app
+        run: |
+          flatpak-builder --force-clean build-dir io.tauricord.yml --user
+
+      - name: Bundle Flatpak (optional)
+        run: |
+          flatpak-builder --repo=repo --force-clean build-dir io.tauricord.yml --user
+          flatpak build-bundle repo Tauricord.flatpak io.tauricord
+
+      - name: Upload Flatpak bundle
+        uses: actions/upload-artifact@v3
+        with:
+          name: Tauricord.flatpak
+          path: Tauricord.flatpak

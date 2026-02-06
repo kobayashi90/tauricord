@@ -1,0 +1,55 @@
+### .github/workflows/build-linux.yml
+name: Tauri Linux Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-linux-docker:
+    name: Build Linux in Docker
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/tauri-apps/tauri-build-image:latest  # offizielles Tauri Docker Build Image mit allen Dependencies
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Rust toolchain (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Tauri CLI globally
+        run: npm install -g @tauri-apps/cli
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: linux-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: linux-cargo-registry-
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: linux-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: linux-cargo-build-
+
+      - name: Build Tauri app for Linux
+        run: tauri build --release
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifacts
+          path: target/release/bundle/appimage/*.AppImage
+          if-no-files-found: warn

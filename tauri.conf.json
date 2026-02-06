@@ -1,0 +1,34 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Tauricord",
+  "version": "0.3.0",
+  "identifier": "com.tauricord.dev",
+  "build": {
+    "devUrl": "https://discord.com/app"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Tauricord",
+        "width": 800,
+        "height": 600,
+		"url": "https://discord.com/app",
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {
+    "fs": {},
+    "dialog": {}
+  },
+  "bundle": {
+  "active": true,
+  "targets": ["deb","nsis"],
+  "icon": ["icons/icon.png"],
+  "resources": []
+  }
+}
