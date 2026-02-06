@@ -3,6 +3,63 @@
 
 fn main() {
     tauri::Builder::default()
+        .setup(|app| {
+            let main_window = app.get_webview_window("main").unwrap();
+            
+            // Inject script to handle permissions and hide notification bar
+            main_window.eval(r#"
+                (function() {
+                    // 1. Hide Discord's screen-share notification bar
+                    const hideNotificationBar = () => {
+                        const observer = new MutationObserver(() => {
+                            const notifBars = document.querySelectorAll(
+                                '[class*="notification"],' +
+                                '[class*="banner"],' +
+                                '[role="alert"]'
+                            );
+                            notifBars.forEach(bar => {
+                                const text = bar.textContent || '';
+                                if (text.includes('screen') || text.includes('sharing') || text.includes('broadcast') || text.includes('Bildschirm') || text.includes('Audio')) {
+                                    bar.style.display = 'none';
+                                }
+                            });
+                        });
+                        observer.observe(document.body, { 
+                            childList: true, 
+                            subtree: true 
+                        });
+                    };
+                    
+                    // 2. Handle permission requests
+                    if (navigator.permissions) {
+                        const originalQuery = navigator.permissions.query;
+                        navigator.permissions.query = async (params) => {
+                            if (params.name === 'microphone' || params.name === 'camera') {
+                                return { state: 'granted' };
+                            }
+                            return originalQuery.call(navigator.permissions, params);
+                        };
+                    }
+                    
+                    // 3. Auto-grant getUserMedia
+                    if (navigator.mediaDevices) {
+                        const originalGetUserMedia = navigator.mediaDevices.getUserMedia;
+                        navigator.mediaDevices.getUserMedia = async function(constraints) {
+                            try {
+                                return await originalGetUserMedia.call(this, constraints);
+                            } catch (err) {
+                                console.log('Media request:', constraints, err);
+                                throw err;
+                            }
+                        };
+                    }
+                    
+                    hideNotificationBar();
+                })();
+            "#).ok();
+            
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

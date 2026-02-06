@@ -6,6 +6,8 @@
     "main"
   ],
   "permissions": [
-    "core:default"
+    "core:default",
+    "fs:allow-read",
+    "fs:scope"
   ]
 }

@@ -4,9 +4,9 @@ version = "0.3.0"
 description = "A lightweight desktop wrapper for the Discord Web App, built using Tauri. This application offers the full Discord experience with the performance and resource efficiency of a native app. It leverages the web version of Discord while providing native windowing, system tray support, and better OS integration without the bloat of Electron."
 authors = ["Tauricord"]
 license = "Unlicense"
-repository = "n/a"
-edition = "2024"
-rust-version = "1.87.0"
+repository = "https://github.com/kobayashi90/tauricord"
+edition = "2021"
+rust-version = "1.92.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

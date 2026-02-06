@@ -12,13 +12,14 @@
         "title": "Tauricord",
         "width": 800,
         "height": 600,
-		"url": "https://discord.com/app",
+        "url": "https://discord.com/app",
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "dragDropEnabled": true
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; connect-src 'self' https://discord.com wss:; img-src 'self' https:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:"
     }
   },
   "plugins": {
