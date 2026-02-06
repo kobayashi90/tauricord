@@ -2,8 +2,6 @@ app-id: io.tauricord.dev
 runtime: org.freedesktop.Platform
 runtime-version: "22.08"
 sdk: org.freedesktop.Sdk
-sdk-extensions:
-  - org.freedesktop.Sdk.Extension.rust-stable
 command: tauricord
 build-options:
   build-args:
