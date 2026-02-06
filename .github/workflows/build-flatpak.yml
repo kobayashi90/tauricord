@@ -31,11 +31,11 @@ jobs:
 
       - name: Build Flatpak app
         run: |
-          flatpak-builder --force-clean build-dir io.tauricord.yml --user
+          flatpak-builder --force-clean --user build-dir io.tauricord.yml
 
       - name: Bundle Flatpak (optional)
         run: |
-          flatpak-builder --repo=repo --force-clean build-dir io.tauricord.yml --user
+          flatpak-builder --repo=repo --force-clean --user build-dir io.tauricord.yml
           flatpak build-bundle repo Tauricord.flatpak io.tauricord
 
       - name: Upload Flatpak bundle
