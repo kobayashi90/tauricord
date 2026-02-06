@@ -3,6 +3,9 @@ runtime: org.freedesktop.Platform
 runtime-version: "22.08"
 sdk: org.freedesktop.Sdk
 command: tauricord
+build-options:
+  build-args:
+    - --share=network
 finish-args:
   - --share=network
   - --share=ipc
