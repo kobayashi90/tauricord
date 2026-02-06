@@ -7,7 +7,7 @@ pub fn run() {
   };
   
   tauri::Builder::default()
-    .setup(|app| {
+    .setup(move |app| {
       app.handle().plugin(
         tauri_plugin_log::Builder::default()
           .level(log_level)
