@@ -13,23 +13,42 @@ fn main() {
                 (function() {
                     // 1. Hide Discord's screen-share notification bar
                     const hideNotificationBar = () => {
-                        const observer = new MutationObserver(() => {
-                            const notifBars = document.querySelectorAll(
-                                '[class*="notification"],' +
-                                '[class*="banner"],' +
-                                '[role="alert"]'
-                            );
-                            notifBars.forEach(bar => {
-                                const text = bar.textContent || '';
-                                if (text.includes('screen') || text.includes('sharing') || text.includes('broadcast') || text.includes('Bildschirm') || text.includes('Audio')) {
-                                    bar.style.display = 'none';
+                        const hideElement = (el) => {
+                            if (el) {
+                                el.style.setProperty('display', 'none', 'important');
+                                el.style.setProperty('visibility', 'hidden', 'important');
+                                el.style.setProperty('height', '0', 'important');
+                                el.style.setProperty('opacity', '0', 'important');
+                            }
+                        };
+
+                        // Initial scan
+                        const scanAndHide = () => {
+                            // Try common selectors
+                            document.querySelectorAll('[class*="notification"], [class*="banner"], [role="alert"], [class*="notice"], div').forEach(el => {
+                                const text = el.textContent || '';
+                                if (text.includes('screen') || text.includes('sharing') || text.includes('broadcast') || 
+                                    text.includes('Bildschirm') || text.includes('Audio') || text.includes('teilt') || 
+                                    text.includes('streaming') || text.includes('going live')) {
+                                    hideElement(el.closest('[class*="notification"]') || el.closest('[class*="banner"]') || el.closest('[role="alert"]') || el);
                                 }
                             });
+                        };
+
+                        // Run immediately
+                        scanAndHide();
+
+                        // Watch for new notifications
+                        const observer = new MutationObserver(() => {
+                            scanAndHide();
                         });
                         observer.observe(document.body, { 
                             childList: true, 
                             subtree: true 
                         });
+
+                        // Also check periodically
+                        setInterval(scanAndHide, 500);
                     };
                     
                     // 2. Handle permission requests
