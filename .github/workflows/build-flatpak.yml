@@ -23,8 +23,8 @@ jobs:
 
       - name: Install GNOME SDK and Platform
         run: |
-          flatpak install -y --user flathub org.gnome.Platform//47
-          flatpak install -y --user flathub org.gnome.Sdk//47
+          flatpak install -y --user flathub org.gnome.Platform//48
+          flatpak install -y --user flathub org.gnome.Sdk//48
           flatpak install -y --user flathub org.freedesktop.Sdk.Extension.rust-stable//24.08
 
       - name: Cache Flatpak builder
