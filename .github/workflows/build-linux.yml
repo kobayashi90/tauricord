@@ -35,8 +35,8 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install Tauri CLI globally
-        run: npm install -g @tauri-apps/cli
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
 
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -60,7 +60,7 @@ jobs:
           restore-keys: linux-cargo-build-
 
       - name: Build Tauri app for Linux
-        run: npm run tauri build -- --release
+        run: cargo tauri build --release
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
