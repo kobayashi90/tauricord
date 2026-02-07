@@ -40,6 +40,8 @@ jobs:
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli --force
+
+      - name: Build Tauri app for Windows
         run: cargo tauri build
 
       - name: Upload Windows artifacts
