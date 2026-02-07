@@ -15,7 +15,8 @@
         "url": "https://discord.com/app",
         "resizable": true,
         "fullscreen": false,
-        "dragDropEnabled": true
+        "dragDropEnabled": true,
+        "devTools": true
       }
     ],
     "security": {
