@@ -17,22 +17,26 @@ jobs:
       - name: Set up Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Create cargo cache directories
-        run: |
-          mkdir -p "${{ env.USERPROFILE }}\.cargo\registry"
-          mkdir -p "${{ env.USERPROFILE }}\.cargo\git"
-          mkdir -p "${{ env.USERPROFILE }}\.cargo\bin"
-        shell: pwsh
-
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
-          path: |
-            ${{ env.USERPROFILE }}\.cargo\registry
-            ${{ env.USERPROFILE }}\.cargo\git
-            ${{ env.USERPROFILE }}\.cargo\bin
-          key: windows-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: windows-cargo-
+          path: ~/.cargo/registry
+          key: windows-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: windows-cargo-registry-
+
+      - name: Cache cargo git
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: windows-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: windows-cargo-git-
+
+      - name: Cache cargo bin
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin
+          key: windows-cargo-bin-tauri-cli
+          restore-keys: windows-cargo-bin-
 
       - name: Cache cargo build
         uses: actions/cache@v4
