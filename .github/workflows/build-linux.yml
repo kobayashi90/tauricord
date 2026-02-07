@@ -60,7 +60,7 @@ jobs:
           restore-keys: linux-cargo-build-
 
       - name: Build Tauri app for Linux
-        run: cargo tauri build --release
+        run: cargo tauri build -- --release
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
