@@ -75,32 +75,6 @@ fn main() {
                         };
                     }
                     
-                    // 4. Enable drag and drop by preventing default blocking behavior
-                    document.addEventListener('dragover', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        e.dataTransfer.dropEffect = 'copy';
-                    });
-                    
-                    document.addEventListener('dragleave', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    });
-                    
-                    document.addEventListener('drop', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    });
-                    
-                    // Remove drag-drop prevention on common Discord elements
-                    const preventDefaults = ['dragenter', 'dragover', 'dragleave', 'drop'];
-                    preventDefaults.forEach(eventName => {
-                        document.addEventListener(eventName, (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                        }, true);
-                    });
-                    
                     hideNotificationBar();
                 })();
             "#).ok();
