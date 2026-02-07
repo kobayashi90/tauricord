@@ -75,6 +75,66 @@ fn main() {
                         };
                     }
                     
+                    // 4. Handle file drag and drop for Discord uploads
+                    const handleDragDrop = () => {
+                        let dragCounter = 0;
+
+                        document.addEventListener('dragenter', (e) => {
+                            dragCounter++;
+                            e.preventDefault();
+                            e.stopPropagation();
+                        });
+
+                        document.addEventListener('dragleave', (e) => {
+                            dragCounter--;
+                            e.preventDefault();
+                            e.stopPropagation();
+                        });
+
+                        document.addEventListener('dragover', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.dataTransfer.dropEffect = 'copy';
+                        });
+
+                        document.addEventListener('drop', (e) => {
+                            dragCounter = 0;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                                // Find Discord's file input or upload element
+                                const fileInput = document.querySelector('input[type="file"]');
+                                
+                                if (fileInput) {
+                                    // Transfer files to the input
+                                    fileInput.files = e.dataTransfer.files;
+                                    
+                                    // Trigger change event
+                                    const event = new Event('change', { bubbles: true });
+                                    fileInput.dispatchEvent(event);
+                                    
+                                    // Also trigger input event
+                                    const inputEvent = new Event('input', { bubbles: true });
+                                    fileInput.dispatchEvent(inputEvent);
+                                    
+                                    console.log('Files dropped:', e.dataTransfer.files.length);
+                                } else {
+                                    // Alternative: simulate file picker dialog by clicking any upload button
+                                    const uploadButtons = document.querySelectorAll('[aria-label*="upload" i], [title*="upload" i], button[class*="upload"]');
+                                    if (uploadButtons.length > 0) {
+                                        console.log('Found upload button, triggering click');
+                                        uploadButtons[0].click();
+                                    } else {
+                                        console.log('No file input or upload button found');
+                                    }
+                                }
+                            }
+                        });
+                    };
+                    
+                    handleDragDrop();
+                    
                     hideNotificationBar();
                 })();
             "#).ok();
