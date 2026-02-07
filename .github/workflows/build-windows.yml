@@ -19,26 +19,27 @@ jobs:
       - name: Set up Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --force
-
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
           path: |
             ${{ env.USERPROFILE }}\.cargo\registry
             ${{ env.USERPROFILE }}\.cargo\git
-          key: windows-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: windows-cargo-registry-
+            ${{ env.USERPROFILE }}\.cargo\bin
+          key: windows-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: windows-cargo-
 
       - name: Cache cargo build
         uses: actions/cache@v4
         with:
           path: target
-          key: windows-cargo-build-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: windows-cargo-build-
+          key: windows-cargo-build-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/tauri.conf.json') }}
+          restore-keys: |
+            windows-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+            windows-cargo-build-
 
-      - name: Build Tauri app for Windows
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --force
         run: cargo tauri build
 
       - name: Upload Windows artifacts
