@@ -58,6 +58,9 @@ jobs:
             linux-cargo-build-${{ hashFiles('**/Cargo.lock') }}
             linux-cargo-build-
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
       - name: Build Tauri app for Linux
         run: cargo tauri build
 
