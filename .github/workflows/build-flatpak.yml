@@ -36,14 +36,20 @@ jobs:
             flatpak-builder-${{ hashFiles('**/Cargo.lock') }}
             flatpak-builder-
 
+      - name: Extract version from Cargo.toml
+        id: version
+        run: |
+          VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Build Flatpak bundle
         run: |
           flatpak-builder --force-clean --user --repo=repo build-dir io.tauricord.yml
-          flatpak build-bundle repo Tauricord.flatpak io.tauricord.dev
+          flatpak build-bundle repo Tauricord_v${{ steps.version.outputs.version }}.flatpak io.tauricord.dev
 
       - name: Upload Flatpak bundle
         uses: actions/upload-artifact@v4
         with:
-          name: Tauricord.flatpak
-          path: Tauricord.flatpak
+          name: Tauricord-v${{ steps.version.outputs.version }}.flatpak
+          path: Tauricord_v${{ steps.version.outputs.version }}.flatpak
           if-no-files-found: warn
