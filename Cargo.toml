@@ -1,6 +1,6 @@
 [package]
 name = "tauricord"
-version = "0.3.0"
+version = "0.5.0"
 description = "A lightweight desktop wrapper for the Discord Web App, built using Tauri. This application offers the full Discord experience with the performance and resource efficiency of a native app. It leverages the web version of Discord while providing native windowing, system tray support, and better OS integration without the bloat of Electron."
 authors = ["Tauricord"]
 license = "Unlicense"
@@ -11,13 +11,17 @@ rust-version = "1.77.2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "2.2.0", features = [] }
+tauri-build = { version = "2", features = [] }
 
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.5.0", features = [] }
+tauri = { version = "2", features = ["tray-icon", "image-png", "webview-data-url"] }
 tauri-plugin-log = "2.0.0-rc"
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-shell = "2"
+open = "5"
+urlencoding = "2"
+base64 = "0.22"

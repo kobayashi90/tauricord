@@ -28,6 +28,7 @@ modules:
       - cargo build --release
       - install -Dm755 target/release/tauricord /app/bin/tauricord
       - install -Dm644 icons/icon.png /app/share/icons/hicolor/256x256/apps/io.tauricord.dev.png
+      - install -Dm644 assets/io.tauricord.dev.desktop /app/share/applications/io.tauricord.dev.desktop
     sources:
       - type: dir
         path: .

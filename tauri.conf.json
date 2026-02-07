@@ -7,26 +7,21 @@
     "devUrl": "https://discord.com/app"
   },
   "app": {
-    "windows": [
-      {
-        "title": "Tauricord",
-        "width": 800,
-        "height": 600,
-        "url": "https://discord.com/app",
-        "resizable": true,
-        "fullscreen": false,
-        "dragDropEnabled": false
-      }
-    ]
+    "windows": []
   },
   "plugins": {
     "fs": {},
     "dialog": {}
   },
   "bundle": {
-  "active": true,
-  "targets": ["deb","nsis"],
-  "icon": ["icons/icon.png"],
-  "resources": []
+    "active": true,
+    "targets": ["deb", "nsis"],
+    "icon": ["icons/icon.png"],
+    "resources": [],
+    "linux": {
+      "deb": {
+        "desktopTemplate": "assets/io.tauricord.dev.desktop"
+      }
+    }
   }
 }
