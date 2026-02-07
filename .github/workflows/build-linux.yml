@@ -66,7 +66,7 @@ jobs:
             linux-cargo-build-
 
       - name: Install Tauri CLI
-        run: cargo install tauri-cli
+        run: cargo install tauri-cli --force
 
       - name: Build Tauri app for Linux
         run: cargo tauri build
