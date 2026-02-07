@@ -8,49 +8,35 @@ fn main() {
         .setup(|app| {
             let main_window = app.get_webview_window("main").unwrap();
             
-            // Inject script to handle permissions and hide notification bar
+            // Inject script to handle permissions and hide Discord's in-app screen share bar.
+            // NOTE: The browser-level WebView2 "sharing your screen" notification bar
+            // CANNOT be hidden — WebView2/Tauri has no equivalent to Electron's
+            // setDisplayMediaRequestHandler(). Dorion and WebCord both only hide
+            // Discord's own DOM bar, not the browser chrome bar.
             main_window.eval(r#"
                 (function() {
-                    // 1. Hide Discord's screen-share notification bar
-                    const hideNotificationBar = () => {
-                        const hideElement = (el) => {
-                            if (el) {
-                                el.style.setProperty('display', 'none', 'important');
-                                el.style.setProperty('visibility', 'hidden', 'important');
-                                el.style.setProperty('height', '0', 'important');
-                                el.style.setProperty('opacity', '0', 'important');
-                            }
-                        };
-
-                        // Initial scan
-                        const scanAndHide = () => {
-                            // Try common selectors
-                            document.querySelectorAll('[class*="notification"], [class*="banner"], [role="alert"], [class*="notice"], div').forEach(el => {
-                                const text = el.textContent || '';
-                                if (text.includes('screen') || text.includes('sharing') || text.includes('broadcast') || 
-                                    text.includes('Bildschirm') || text.includes('Audio') || text.includes('teilt') || 
-                                    text.includes('streaming') || text.includes('going live')) {
-                                    hideElement(el.closest('[class*="notification"]') || el.closest('[class*="banner"]') || el.closest('[role="alert"]') || el);
-                                }
+                    // 1. Hide Discord's in-app screen-share notification bar via CSS
+                    //    Same approach as Dorion (extra.css) and WebCord (discord.css):
+                    //    - WebCord:  div[class^=bar_] { height: 0px }
+                    //    - Dorion:   div[class^='base'] div[class^='bar_'] { z-index/bg }
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        /* Hide Discord's in-app screen share / Go Live bar */
+                        div[class^='base'] div[class^='bar_'] {
+                            display: none !important;
+                        }
+                    `;
+                    const inject = () => {
+                        if (document.head) {
+                            document.head.appendChild(style);
+                        } else {
+                            document.addEventListener('DOMContentLoaded', () => {
+                                document.head.appendChild(style);
                             });
-                        };
-
-                        // Run immediately
-                        scanAndHide();
-
-                        // Watch for new notifications
-                        const observer = new MutationObserver(() => {
-                            scanAndHide();
-                        });
-                        observer.observe(document.body, { 
-                            childList: true, 
-                            subtree: true 
-                        });
-
-                        // Also check periodically
-                        setInterval(scanAndHide, 500);
+                        }
                     };
-                    
+                    inject();
+
                     // 2. Handle permission requests
                     if (navigator.permissions) {
                         const originalQuery = navigator.permissions.query;
@@ -61,7 +47,7 @@ fn main() {
                             return originalQuery.call(navigator.permissions, params);
                         };
                     }
-                    
+
                     // 3. Auto-grant getUserMedia
                     if (navigator.mediaDevices) {
                         const originalGetUserMedia = navigator.mediaDevices.getUserMedia;
@@ -74,8 +60,6 @@ fn main() {
                             }
                         };
                     }
-                    
-                    hideNotificationBar();
                 })();
             "#).ok();
             
