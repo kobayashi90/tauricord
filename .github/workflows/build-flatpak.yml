@@ -38,7 +38,7 @@ jobs:
 
       - name: Build Flatpak bundle
         run: |
-          flatpak-builder --force-clean --user --repo=repo --allow=network build-dir io.tauricord.yml
+          flatpak-builder --force-clean --user --repo=repo build-dir io.tauricord.yml
           flatpak build-bundle repo Tauricord.flatpak io.tauricord.dev
 
       - name: Upload Flatpak bundle
