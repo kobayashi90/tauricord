@@ -17,6 +17,13 @@ jobs:
       - name: Set up Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Create cargo cache directories
+        run: |
+          mkdir -p "${{ env.USERPROFILE }}\.cargo\registry"
+          mkdir -p "${{ env.USERPROFILE }}\.cargo\git"
+          mkdir -p "${{ env.USERPROFILE }}\.cargo\bin"
+        shell: pwsh
+
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
