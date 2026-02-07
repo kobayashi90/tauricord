@@ -5,21 +5,33 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-linux-docker:
-    name: Build Linux in Docker
+  build-linux:
+    name: Build Linux
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/tauri-apps/tauri-build-image:latest  # offizielles Tauri Docker Build Image mit allen Dependencies
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.0-dev \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
       - name: Set up Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@stable
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
 
@@ -29,11 +41,16 @@ jobs:
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
+          path: ~/.cargo/registry
           key: linux-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: linux-cargo-registry-
+
+      - name: Cache cargo git
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: linux-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: linux-cargo-git-
 
       - name: Cache cargo build
         uses: actions/cache@v4
@@ -43,11 +60,13 @@ jobs:
           restore-keys: linux-cargo-build-
 
       - name: Build Tauri app for Linux
-        run: tauri build --release
+        run: npm run tauri build -- --release
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-artifacts
-          path: target/release/bundle/appimage/*.AppImage
+          path: |
+            target/release/bundle/appimage/*.AppImage
+            target/release/bundle/deb/*.deb
           if-no-files-found: warn
