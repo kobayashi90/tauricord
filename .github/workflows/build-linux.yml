@@ -49,13 +49,6 @@ jobs:
           key: linux-cargo-git-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: linux-cargo-git-
 
-      - name: Cache cargo bin
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin
-          key: linux-cargo-bin-tauri-cli
-          restore-keys: linux-cargo-bin-
-
       - name: Cache cargo build
         uses: actions/cache@v4
         with:
