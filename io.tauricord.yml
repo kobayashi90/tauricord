@@ -18,7 +18,6 @@ finish-args:
   - --device=dri
   - --filesystem=xdg-download
   - --talk-name=org.freedesktop.portal.Desktop
-  - --env=GSK_RENDERER=gl
   - --env=GDK_SCALE=1
   - --env=GTK3_MODULES=
   - --env=WEBKIT_DISABLE_DMABUF_RENDERER=1
