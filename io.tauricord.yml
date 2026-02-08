@@ -1,9 +1,9 @@
 app-id: io.tauricord.dev
-runtime: org.freedesktop.Platform
-runtime-version: "24.08"
-sdk: org.freedesktop.Sdk
+runtime: org.gnome.Platform
+runtime-version: "48"
+sdk: org.gnome.Sdk
 sdk-extensions:
-  - org.freedesktop.Sdk.Extension.rust-stable
+  - org.freedesktop.Sdk.Extension.rust-stable//24.08
 command: tauricord
 
 finish-args:
@@ -31,8 +31,7 @@ modules:
         - --share=network
       env:
         CARGO_HOME: /run/build/tauricord/cargo
-        PKG_CONFIG_PATH: /app/lib/pkgconfig:/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig
-        PKG_CONFIG_LIBDIR: /usr/lib/x86_64-linux-gnu/pkgconfig
+        PKG_CONFIG_PATH: /app/lib/pkgconfig:/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig
     build-commands:
       - cargo build --release --no-default-features
       - install -Dm755 target/release/tauricord /app/bin/tauricord
