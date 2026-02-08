@@ -18,8 +18,8 @@ finish-args:
   - --device=dri
   - --filesystem=xdg-download
   - --talk-name=org.freedesktop.portal.Desktop
-  - --env=GSK_RENDERER=cairo
-  - --env=LIBGL_ALWAYS_INDIRECT=1
+  - --env=GSK_RENDERER=gl
+  - --env=GDK_SCALE=1
 
 modules:
 
