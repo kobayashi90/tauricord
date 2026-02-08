@@ -22,9 +22,9 @@ modules:
       - -DCMAKE_INSTALL_PREFIX=/app
       - -DENABLE_TESTS=OFF
     sources:
-      - type: git
-        url: https://github.com/AyatanaIndicators/libdbusmenu-gtk.git
-        tag: "16.04.1"
+      - type: archive
+        url: https://github.com/AyatanaIndicators/libdbusmenu-gtk/releases/download/16.04.1/libdbusmenu-gtk-16.04.1.tar.gz
+        sha256: b9cc4a2207e2fcbfedc1e4b27d33e2775bb00d1a10b175157a85b588127b2e58
 
   - name: libayatana-indicator
     buildsystem: cmake
@@ -32,9 +32,9 @@ modules:
       - -DCMAKE_INSTALL_PREFIX=/app
       - -DENABLE_TESTS=OFF
     sources:
-      - type: git
-        url: https://github.com/AyatanaIndicators/libayatana-indicator.git
-        tag: "0.9.3"
+      - type: archive
+        url: https://github.com/AyatanaIndicators/libayatana-indicator/releases/download/0.9.3/libayatana-indicator-0.9.3.tar.gz
+        sha256: 8661a55cac110e0484487db88b15673052b4b63c0349dc5e40c857e37cb77c47
 
   - name: libayatana-appindicator
     buildsystem: cmake
@@ -42,10 +42,9 @@ modules:
       - -DCMAKE_INSTALL_PREFIX=/app
       - -DENABLE_TESTS=OFF
     sources:
-      - type: git
-        url: https://github.com/AyatanaIndicators/libayatana-appindicator.git
-        tag: "0.5.91"
-        commit: f225dccbd82f48bb1ab10767b9b074e24fedb0f3
+      - type: archive
+        url: https://github.com/AyatanaIndicators/libayatana-appindicator/releases/download/0.5.91/libayatana-appindicator-0.5.91.tar.gz
+        sha256: e29f1fef501e08155066404bebfb66055e45a36a0ffc909cd13be215629de5d0
 
   - name: tauricord
     buildsystem: simple
