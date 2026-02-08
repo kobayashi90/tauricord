@@ -42,9 +42,11 @@ modules:
       - type: archive
         url: http://archive.ubuntu.com/ubuntu/pool/main/libd/libdbusmenu/libdbusmenu_16.04.1+18.10.20180917.orig.tar.gz
         sha256: 9be5dc0f2657a9eb76b02d2cdfafa4490652c70bcdfafba5574c505afd2bbe79
-      - type: patch
-        path: libdbusmenu-valgrind.patch
     build-commands:
+      - grep -n "VALGRIND" configure.ac || true
+      - sed -i '/AC_PATH_PROG.*VALGRIND/d; /AM_CONDITIONAL.*VALGRIND/d' configure.ac
+      - grep -n "HAVE_VALGRIND" libdbusmenu-gtk/Makefile.am || true
+      - sed -i '/if HAVE_VALGRIND/,/endif/d' libdbusmenu-gtk/Makefile.am
       - autoreconf -fiv
       - ./configure $CONFIGURE_ARGS
       - make
