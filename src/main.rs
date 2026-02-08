@@ -5,11 +5,13 @@ use tauri::{
     AppHandle, Manager,
     WebviewUrl, WebviewWindowBuilder, WindowEvent,
     menu::{Menu, MenuItem, PredefinedMenuItem},
-    #[cfg(feature = "with-tray")]
-    tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState},
     image::Image,
     webview::NewWindowResponse,
 };
+
+#[cfg(feature = "with-tray")]
+use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState};
+
 use base64::Engine;
 
 /// JS that runs BEFORE any page script (via initialization_script).
