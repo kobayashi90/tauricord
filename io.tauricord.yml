@@ -39,9 +39,8 @@ modules:
       - --disable-dumper
       - --disable-valgrind
     build-commands:
-      - find . -name "Makefile.am" -exec sed -i 's/if HAVE_VALGRIND/if FALSE/g' {} +
-      - find . -name "Makefile.am" -exec sed -i 's/endif HAVE_VALGRIND/endif FALSE/g' {} +
-      - sed -i '/^AC_CONFIG_FILES/i AM_CONDITIONAL([HAVE_VALGRIND], [false])' configure.ac
+      - find . -name "Makefile.am" -exec sed -i '/if HAVE_VALGRIND/,/endif HAVE_VALGRIND/d' {} +
+      - sed -i '/HAVE_VALGRIND/d' configure.ac
       - autoreconf -fiv
       - ./configure $CONFIGURE_ARGS
       - make
