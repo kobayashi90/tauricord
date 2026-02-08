@@ -27,5 +27,5 @@ urlencoding = "2"
 base64 = "0.22"
 
 [features]
-default = []
+default = ["with-tray"]
 with-tray = ["tauri/tray-icon"]
