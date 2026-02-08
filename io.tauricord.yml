@@ -16,17 +16,6 @@ finish-args:
   - --filesystem=xdg-download
 
 modules:
-  - name: libayatana-appindicator
-    buildsystem: cmake
-    config-opts:
-      - -DCMAKE_INSTALL_PREFIX=/app
-      - -DENABLE_TESTS=OFF
-    sources:
-      - type: git
-        url: https://github.com/AyatanaIndicators/libayatana-appindicator.git
-        tag: "0.5.91"
-        commit: f225dccbd82f48bb1ab10767b9b074e24fedb0f3
-
   - name: tauricord
     buildsystem: simple
     build-options:
@@ -35,7 +24,6 @@ modules:
         - --share=network
       env:
         CARGO_HOME: /run/build/tauricord/cargo
-        PKG_CONFIG_PATH: /app/lib/pkgconfig
     build-commands:
       - cargo build --release
       - install -Dm755 target/release/tauricord /app/bin/tauricord
