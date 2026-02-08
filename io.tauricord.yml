@@ -23,8 +23,8 @@ modules:
       - -DENABLE_TESTS=OFF
     sources:
       - type: archive
-        url: https://github.com/AyatanaIndicators/libdbusmenu-gtk/releases/download/16.04.1/libdbusmenu-gtk-16.04.1.tar.gz
-        sha256: b9cc4a2207e2fcbfedc1e4b27d33e2775bb00d1a10b175157a85b588127b2e58
+        url: http://archive.ubuntu.com/ubuntu/pool/main/libd/libdbusmenu/libdbusmenu_16.04.1+18.10.20180917.orig.tar.gz
+        sha256: 8cc4cc82c9ca4cba52597d521f6eac12e8b1bd01e30e3cd2f8c6fa8dc38c9ad7
 
   - name: libayatana-indicator
     buildsystem: cmake
