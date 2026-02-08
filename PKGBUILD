@@ -16,24 +16,25 @@ makedepends=(
   'rust'
   'cargo'
   'base-devel'
+  'git'
 )
 provides=("$pkgname")
 conflicts=("$pkgname")
-source=("$pkgname-$pkgver.tar.gz::https://github.com/kobayashi90/tauricord/archive/refs/tags/v${pkgver}.tar.gz")
+source=("git+https://github.com/kobayashi90/tauricord.git#tag=v${pkgver}")
 sha256sums=('SKIP')
 
 build() {
-  cd "$pkgname-$pkgver"
+  cd "$pkgname"
   cargo build --release --locked
 }
 
 check() {
-  cd "$pkgname-$pkgver"
+  cd "$pkgname"
   cargo test --release
 }
 
 package() {
-  cd "$pkgname-$pkgver"
+  cd "$pkgname"
   
   # Binary
   install -Dm755 "target/release/$pkgname" "$pkgdir/usr/bin/$pkgname"
