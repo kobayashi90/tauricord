@@ -24,7 +24,7 @@ modules:
     sources:
       - type: archive
         url: http://archive.ubuntu.com/ubuntu/pool/main/libd/libdbusmenu/libdbusmenu_16.04.1+18.10.20180917.orig.tar.gz
-        sha256: 8cc4cc82c9ca4cba52597d521f6eac12e8b1bd01e30e3cd2f8c6fa8dc38c9ad7
+        sha256: 9be5dc0f2657a9eb76b02d2cdfafa4490652c70bcdfafba5574c505afd2bbe79
 
   - name: libayatana-indicator
     buildsystem: cmake
