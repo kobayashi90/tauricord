@@ -59,14 +59,6 @@ jobs:
       - name: Build Tauri app for Windows
         run: cargo tauri build
 
-      - name: Rename Windows artifacts with version
-        run: |
-          $version = "${{ steps.version.outputs.version }}"
-          Get-ChildItem "target/release/bundle/nsis/*.exe" | ForEach-Object {
-            $newName = $_.BaseName + "_v" + $version + $_.Extension
-            Rename-Item $_.FullName -NewName $newName
-          }
-
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
