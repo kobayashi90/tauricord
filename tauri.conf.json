@@ -7,10 +7,7 @@
     "devUrl": "https://discord.com/app"
   },
   "app": {
-    "windows": [],
-    "linux": {
-      "acceptFirstMouse": true
-    }
+    "windows": []
   },
   "plugins": {
     "fs": {},
