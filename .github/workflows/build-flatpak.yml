@@ -21,6 +21,14 @@ jobs:
         run: |
           flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
 
+      - name: Cache Flatpak runtimes and SDKs
+        uses: actions/cache@v4
+        with:
+          path: ~/.var/app/
+          key: flatpak-runtimes-${{ runner.os }}-gnome48-rust24.08
+          restore-keys: |
+            flatpak-runtimes-${{ runner.os }}-gnome48
+
       - name: Install GNOME SDK and Platform
         run: |
           flatpak install -y --user flathub org.gnome.Platform//48
