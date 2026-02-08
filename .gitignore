@@ -1,0 +1,13 @@
+target/
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.iml
+.flatpak-builder/
+repo/
+build-dir/
+dist/
+Cargo.lock
