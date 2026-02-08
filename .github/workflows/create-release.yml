@@ -1,0 +1,72 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag (e.g., v0.5.0)'
+        required: true
+        default: 'v0.5.0'
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version from Cargo.toml
+        id: version
+        run: |
+          VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          release_name: Tauricord v${{ steps.version.outputs.version }}
+          body: |
+            # Tauricord v${{ steps.version.outputs.version }}
+            
+            ## Features
+            - Discord Web App wrapper with native windowing
+            - System tray integration (Windows & Linux)
+            - Close-to-tray functionality
+            - About window with branding
+            - External link handling
+            - Full drag-and-drop support
+            - Voice chat support (Linux with session-bus permissions)
+            
+            ## Download
+            - **Windows**: `Tauricord_${{ steps.version.outputs.version }}_x64-setup.exe`
+            - **Linux (deb)**: `tauricord_${{ steps.version.outputs.version }}_0_amd64.deb`
+            - **Flatpak**: `Tauricord_v${{ steps.version.outputs.version }}.flatpak`
+            
+            ## Installation
+            
+            ### Windows
+            Download and run the NSIS installer.
+            
+            ### Linux (Debian/Ubuntu)
+            ```bash
+            sudo dpkg -i tauricord_*.deb
+            ```
+            
+            ### Linux (Arch/EndeavourOS)
+            ```bash
+            git clone https://github.com/kobayashi90/tauricord.git
+            cd tauricord
+            makepkg -si
+            ```
+            
+            ### Flatpak
+            ```bash
+            flatpak install Tauricord_v*.flatpak
+            ```
+          draft: false
+          prerelease: false
