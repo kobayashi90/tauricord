@@ -70,7 +70,7 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Build Tauri AppImage with tray-icon feature (Experimental)
-        run: cargo tauri build --features with-tray --target appimage
+        run: cargo tauri build --features with-tray
 
       - name: Upload experimental AppImage
         uses: actions/upload-artifact@v4
