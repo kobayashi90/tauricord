@@ -18,6 +18,9 @@
     "targets": ["deb", "nsis"],
     "icon": ["icons/icon.png"],
     "resources": [],
+    "windows": {
+      "allowDowngrades": false
+    },
     "linux": {
       "deb": {
         "desktopTemplate": "assets/io.tauricord.dev.desktop"
