@@ -34,7 +34,7 @@ modules:
     sources:
       - type: archive
         url: https://archive.ubuntu.com/ubuntu/pool/universe/liba/libayatana-indicator/libayatana-indicator_0.6.3.orig.tar.gz
-        sha256: adf55b89b158e03ba80f6dcc12ae16ecb1e78ffc1dca3ce79dea584373f6b94f
+        sha256: fd2faee499e9f6fb23bb103daea17a91ee480f8e57a2114ed4ec490127203ff9
 
   - name: libayatana-appindicator
     buildsystem: cmake
@@ -44,7 +44,7 @@ modules:
     sources:
       - type: archive
         url: https://archive.ubuntu.com/ubuntu/pool/universe/liba/libayatana-appindicator/libayatana-appindicator_0.5.4.orig.tar.gz
-        sha256: 58f4966e44f2ff80a6a7be6a1c3f3dd38fcb1d84c04b5b37fad2f0c6b4e0b5e7
+        sha256: 824c0435382c2a6544945eccad2c2172741280f718abf7004d0defe1a1164b03
 
   - name: tauricord
     buildsystem: simple
