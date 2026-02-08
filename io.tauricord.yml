@@ -33,8 +33,8 @@ modules:
       - -DENABLE_TESTS=OFF
     sources:
       - type: archive
-        url: https://archive.ubuntu.com/ubuntu/pool/universe/liba/libayatana-indicator/libayatana-indicator_0.9.4.orig.tar.gz
-        sha256: 7f7ce3189357b02f54408e8224685cb10219ea4f557e840f67f83e0509acef3c
+        url: https://archive.ubuntu.com/ubuntu/pool/universe/liba/libayatana-indicator/libayatana-indicator_0.6.3.orig.tar.gz
+        sha256: adf55b89b158e03ba80f6dcc12ae16ecb1e78ffc1dca3ce79dea584373f6b94f
 
   - name: libayatana-appindicator
     buildsystem: cmake
