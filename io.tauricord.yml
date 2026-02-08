@@ -35,6 +35,7 @@ modules:
     config-opts:
       - --prefix=/app
       - --disable-tests
+      - --disable-gtk2
     sources:
       - type: archive
         url: http://archive.ubuntu.com/ubuntu/pool/main/libd/libdbusmenu/libdbusmenu_16.04.1+18.10.20180917.orig.tar.gz
