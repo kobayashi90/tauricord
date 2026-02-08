@@ -38,17 +38,17 @@ modules:
       - --disable-gtk2
       - --disable-dumper
       - --disable-valgrind
-    build-commands:
-      - find . -name "Makefile.am" -exec sed -i '/if HAVE_VALGRIND/,/endif HAVE_VALGRIND/d' {} +
-      - sed -i '/HAVE_VALGRIND/d' configure.ac
-      - autoreconf -fiv
-      - ./configure $CONFIGURE_ARGS
-      - make
-      - make install
     sources:
       - type: archive
         url: http://archive.ubuntu.com/ubuntu/pool/main/libd/libdbusmenu/libdbusmenu_16.04.1+18.10.20180917.orig.tar.gz
         sha256: 9be5dc0f2657a9eb76b02d2cdfafa4490652c70bcdfafba5574c505afd2bbe79
+      - type: patch
+        path: libdbusmenu-valgrind.patch
+    build-commands:
+      - autoreconf -fiv
+      - ./configure $CONFIGURE_ARGS
+      - make
+      - make install
 
   - name: libayatana-indicator
     buildsystem: cmake

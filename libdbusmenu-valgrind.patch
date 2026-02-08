@@ -1,0 +1,29 @@
+--- a/configure.ac
++++ b/configure.ac
+@@ -65,8 +65,6 @@ AC_PROG_CC
+ AM_PROG_CC_C_O
+ AC_PROG_CXX
+ 
+-AC_PATH_PROG(VALGRIND, valgrind)
+-AM_CONDITIONAL(HAVE_VALGRIND, test ! -z "$VALGRIND")
+ 
+ AC_CONFIG_FILES([
+ Makefile
+--- a/libdbusmenu-gtk/Makefile.am
++++ b/libdbusmenu-gtk/Makefile.am
+@@ -1,16 +1,12 @@
+ 
+ lib_LIBRARIES = libdbusmenu-gtk.a
+ lib_LTLIBRARIES = libdbusmenu-gtk.la
+ 
+ libdbusmenu_gtk_la_SOURCES = \
+ 	menu.c \
+ 	menuitem.c
+ 
+-if HAVE_VALGRIND
+-libdbusmenu_gtk_la_SOURCES += \
+-	menuitem-private.c
+-endif
+ 
+ libdbusmenu_gtk_la_CFLAGS = \
+ 	$(DBUSMENUS_CFLAGS) \
