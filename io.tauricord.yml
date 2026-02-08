@@ -20,8 +20,8 @@ modules:
     buildsystem: autotools
     sources:
       - type: archive
-        url: https://download.gnome.org/sources/gnome-common/1.0/gnome-common-1.0.2.tar.xz
-        sha256: 8d86446cec185b117d9ead3d3c843b12d4bd98f3fc341b02d21c1e3c2decf59d
+        url: https://download.gnome.org/sources/gnome-common/3.18/gnome-common-3.18.0.tar.xz
+        sha256: 22569e370ae755e04527b76328befc4c73b62bfd4a572499fde116b8318af8cf
 
   - name: libdbusmenu-gtk
     buildsystem: autotools
