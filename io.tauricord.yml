@@ -39,6 +39,8 @@ modules:
       - --disable-dumper
       - --disable-valgrind
     build-commands:
+      - sed -i 's/if HAVE_VALGRIND/if FALSE/' Makefile.am
+      - sed -i 's/endif HAVE_VALGRIND/endif FALSE/' Makefile.am
       - autoreconf -fiv
       - ./configure $CONFIGURE_ARGS
       - make
