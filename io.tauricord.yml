@@ -32,7 +32,7 @@ modules:
     sources:
       - type: archive
         url: https://webkitgtk.org/releases/webkitgtk-2.42.5.tar.xz
-        sha256: 5ef2d0e5766e25908833eef1cd0d5d7193a6a9cbc56e43ca8b957b4bb1e8f17
+        sha256: b64278c1f20b8cfdbfb5ff573c37d871aba74a1db26d9b39f74e8953fe61e749
         x-checker-data:
           type: html
           url: https://webkitgtk.org/releases/
