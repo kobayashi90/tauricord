@@ -23,6 +23,16 @@ finish-args:
 
 modules:
 
+  - name: webkit2gtk
+    buildsystem: autotools
+    config-opts:
+      - --disable-gtk-doc
+      - --disable-geolocation
+    sources:
+      - type: archive
+        url: https://webkitgtk.org/releases/webkitgtk-2.42.5.tar.xz
+        sha256: b64278c1f20b8cfdbfb5ff573c37d871aba74a1db26d9b39f74e8953fe61e749
+
   - name: tauricord
     buildsystem: simple
     build-options:
@@ -32,8 +42,6 @@ modules:
       env:
         CARGO_HOME: /run/build/tauricord/cargo
         PKG_CONFIG_PATH: /app/lib/pkgconfig:/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig
-        CFLAGS: -I/usr/include/webkit2
-        LDFLAGS: -L/usr/lib/x86_64-linux-gnu
     build-commands:
       - cargo build --release --no-default-features
       - install -Dm755 target/release/tauricord /app/bin/tauricord
