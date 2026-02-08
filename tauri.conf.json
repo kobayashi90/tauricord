@@ -22,6 +22,12 @@
       "deb": {
         "desktopTemplate": "assets/io.tauricord.dev.desktop"
       }
+    },
+    "windows": {
+      "nsis": {
+        "oneClick": false,
+        "allowToChangeInstallationDirectory": true
+      }
     }
   }
 }
