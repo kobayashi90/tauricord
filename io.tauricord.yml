@@ -17,10 +17,10 @@ finish-args:
 
 modules:
   - name: libdbusmenu-gtk
-    buildsystem: cmake
+    buildsystem: autotools
     config-opts:
-      - -DCMAKE_INSTALL_PREFIX=/app
-      - -DENABLE_TESTS=OFF
+      - --prefix=/app
+      - --disable-tests
     sources:
       - type: archive
         url: http://archive.ubuntu.com/ubuntu/pool/main/libd/libdbusmenu/libdbusmenu_16.04.1+18.10.20180917.orig.tar.gz
