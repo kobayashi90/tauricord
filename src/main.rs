@@ -2,13 +2,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use tauri::{
-    AppHandle, Manager,
     WebviewUrl, WebviewWindowBuilder,
     webview::NewWindowResponse,
 };
 
 #[cfg(feature = "with-tray")]
 use tauri::{
+    AppHandle, Manager,
     WindowEvent,
     menu::{Menu, MenuItem, PredefinedMenuItem},
     image::Image,
@@ -17,6 +17,7 @@ use tauri::{
 #[cfg(feature = "with-tray")]
 use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState};
 
+#[cfg(feature = "with-tray")]
 use base64::Engine;
 
 /// JS that runs BEFORE any page script (via initialization_script).
