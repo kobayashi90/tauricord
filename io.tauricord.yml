@@ -21,6 +21,7 @@ finish-args:
   - --env=GDK_SCALE=1
   - --env=GTK3_MODULES=
   - --env=WEBKIT_DISABLE_DMABUF_RENDERER=1
+  - --env=WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
 
 modules:
 
