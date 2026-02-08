@@ -23,6 +23,13 @@ modules:
         url: https://download.gnome.org/sources/gnome-common/3.18/gnome-common-3.18.0.tar.xz
         sha256: 22569e370ae755e04527b76328befc4c73b62bfd4a572499fde116b8318af8cf
 
+  - name: intltool
+    buildsystem: autotools
+    sources:
+      - type: archive
+        url: https://launchpad.net/intltool/trunk/0.51.0/+download/intltool-0.51.0.tar.gz
+        sha256: 67c74d94196b153b3242ab2e6038e65c732da399fd3a2b409e52398572691d97
+
   - name: libdbusmenu-gtk
     buildsystem: autotools
     config-opts:
