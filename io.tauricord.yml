@@ -23,6 +23,21 @@ finish-args:
 
 modules:
 
+  - name: webkit2gtk
+    buildsystem: cmake
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DENABLE_MINIBROWSER=OFF
+      - -DENABLE_GAMEPAD=OFF
+    sources:
+      - type: archive
+        url: https://webkitgtk.org/releases/webkitgtk-2.42.5.tar.xz
+        sha256: 5ef2d0e5766e25908833eef1cd0d5d7193a6a9cbc56e43ca8b957b4bb1e8f17
+        x-checker-data:
+          type: html
+          url: https://webkitgtk.org/releases/
+          version-pattern: webkitgtk-(\d+\.\d+\.\d+)\.tar\.xz
+
   - name: tauricord
     buildsystem: simple
     build-options:
@@ -31,7 +46,7 @@ modules:
         - --share=network
       env:
         CARGO_HOME: /run/build/tauricord/cargo
-        PKG_CONFIG_PATH: /app/lib/pkgconfig
+        PKG_CONFIG_PATH: /app/lib/pkgconfig:/usr/lib/pkgconfig
     build-commands:
       - cargo build --release --no-default-features
       - install -Dm755 target/release/tauricord /app/bin/tauricord
