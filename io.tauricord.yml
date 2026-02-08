@@ -23,19 +23,6 @@ finish-args:
 
 modules:
 
-  - name: libcanberra
-    sources:
-      - type: archive
-        url: http://0pointer.de/lennart/projects/libcanberra/libcanberra-0.30.tar.xz
-        sha256: c2b671e67e0c288a69f33891d8db8070b2dff1a4c850b8746a369261b79456e
-
-  - name: xapp
-    buildsystem: meson
-    sources:
-      - type: archive
-        url: https://github.com/linuxmint/xapp/releases/download/2.6.3/xapp-2.6.3.tar.gz
-        sha256: 39e43d152f0d91ddfa1de1c1b14eaf34c75ab4e8f16dfe1c08c58c383e74a3cf
-
   - name: tauricord
     buildsystem: simple
     build-options:
