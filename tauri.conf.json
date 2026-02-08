@@ -18,10 +18,6 @@
     "targets": ["deb", "nsis"],
     "icon": ["icons/icon.png"],
     "resources": [],
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
-    },
     "linux": {
       "deb": {
         "desktopTemplate": "assets/io.tauricord.dev.desktop"
