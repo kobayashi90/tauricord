@@ -24,7 +24,7 @@ jobs:
       - name: Cache Flatpak runtimes and SDKs
         uses: actions/cache@v4
         with:
-          path: ~/.var/app/
+          path: ~/.local/share/flatpak/
           key: flatpak-runtimes-${{ runner.os }}-gnome48-rust24.08
           restore-keys: |
             flatpak-runtimes-${{ runner.os }}-gnome48
