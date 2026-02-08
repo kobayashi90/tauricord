@@ -57,6 +57,20 @@ const INIT_SCRIPT: &str = r#"
         })
     });
 
+    // Spoof window.chrome to make Discord think it's Chrome
+    Object.defineProperty(window, 'chrome', {
+        get: () => ({
+            runtime: {},
+            webstore: {}
+        }),
+        configurable: true
+    });
+
+    // Hide that we're using Tauri/WebKit
+    Object.defineProperty(navigator, 'webdriver', {
+        get: () => false
+    });
+
     // 1. Hide Discord's in-app screen-share notification bar via CSS
     const style = document.createElement('style');
     style.textContent = `
@@ -99,7 +113,23 @@ const INIT_SCRIPT: &str = r#"
         };
     }
 
-    // 4. Redirect window.open() to the default browser.
+    // 4. Fix drag-and-drop: prevent event bubbling blocks
+    document.addEventListener('dragover', (e) => {
+        e.preventDefault();
+    }, false);
+    document.addEventListener('drop', (e) => {
+        e.preventDefault();
+    }, false);
+    if (document.body) {
+        document.body.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        }, false);
+        document.body.addEventListener('drop', (e) => {
+            e.preventDefault();
+        }, false);
+    }
+
+    // 5. Redirect window.open() to the default browser.
     //    Runs before Discord's JS so we catch every call.
     const originalOpen = window.open;
     window.open = function(url, ...args) {
