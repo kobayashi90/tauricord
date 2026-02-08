@@ -315,23 +315,30 @@ fn main() {
             // JS) and on_navigation (blocks external URLs in-webview).
             let url = WebviewUrl::External("https://discord.com/app".parse().unwrap());
 
-            let mut builder = WebviewWindowBuilder::new(app, "main", url)
+            #[cfg(target_os = "windows")]
+            let main_window = {
+                let mut builder = WebviewWindowBuilder::new(app, "main", url)
+                    .title("Tauricord")
+                    .inner_size(800.0, 600.0)
+                    .resizable(true)
+                    .fullscreen(false)
+                    .disable_drag_drop_handler();
+
+                builder
+                    .user_agent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+                    .initialization_script(INIT_SCRIPT)
+            };
+
+            #[cfg(not(target_os = "windows"))]
+            let main_window = WebviewWindowBuilder::new(app, "main", url)
                 .title("Tauricord")
                 .inner_size(800.0, 600.0)
                 .resizable(true)
-                .fullscreen(false);
-
-            // Only disable Tauri's drag-drop handler on Windows where it
-            // intercepts WebView2's native D&D. On Linux/WebKitGTK, the
-            // default handler is needed for drag-and-drop to work.
-            #[cfg(target_os = "windows")]
-            {
-                builder = builder.disable_drag_drop_handler();
-            }
-
-            let main_window = builder
+                .fullscreen(false)
                 .user_agent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
-                .initialization_script(INIT_SCRIPT)
+                .initialization_script(INIT_SCRIPT);
+
+            let main_window = main_window
                 .on_navigation(|url| {
                     // Only allow discord.com URLs to load inside the webview.
                     // External URLs are opened in the default browser.
@@ -356,6 +363,9 @@ fn main() {
                     }
                 })
                 .build()?;
+
+            #[cfg(feature = "with-tray")]
+            let _unused_release = &main_window;
 
             // ── Tray Icon ──────────────────────────────────────────────
             #[cfg(feature = "with-tray")]
