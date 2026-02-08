@@ -3848,7 +3848,7 @@ dependencies = [
 
 [[package]]
 name = "tauricord"
-version = "0.3.0"
+version = "0.5.0"
 dependencies = [
  "base64 0.22.1",
  "log",

@@ -7,14 +7,7 @@
     "devUrl": "https://discord.com/app"
   },
   "app": {
-    "windows": [],
-    "windows": [
-      {
-        "title": "Tauricord",
-        "width": 800,
-        "height": 600
-      }
-    ]
+    "windows": []
   },
   "plugins": {
     "fs": {},
@@ -28,27 +21,6 @@
     "linux": {
       "deb": {
         "desktopTemplate": "assets/io.tauricord.dev.desktop"
-      }
-    },
-    "windows": {
-      "certificateThumbprint": null,
-      "digestAlgorithm": "sha256",
-      "signingIdentity": null,
-      "timestampUrl": null,
-      "nsis": {
-        "appId": "com.tauricord.dev",
-        "artifactPath": null,
-        "displayLanguageSelector": false,
-        "headerImage": null,
-        "installerIcon": null,
-        "installerLanguages": null,
-        "license": null,
-        "oneClick": false,
-        "prerelease": false,
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "signingIdentity": null,
-        "timestampUrl": null
       }
     }
   }
