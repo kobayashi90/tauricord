@@ -295,16 +295,9 @@ fn main() {
                     // window.open, image lightbox "Open in Browser", etc.)
                     // at the native WebView2 level.
                     if is_discord_url(&url) {
-                        // Check if this is a screen share window (contains "stream" or "screen")
-                        let url_str = url.as_str().to_lowercase();
-                        if url_str.contains("stream") || url_str.contains("screen") || url_str.contains("rtc") {
-                            // Allow screen share but it will be hidden in on_window_event
-                            NewWindowResponse::Allow
-                        } else {
-                            // Let Discord open popouts etc. by denying
-                            // (they'll fall through to window.open override)
-                            NewWindowResponse::Deny
-                        }
+                        // Let Discord open popouts etc. by denying
+                        // (they'll fall through to window.open override)
+                        NewWindowResponse::Deny
                     } else {
                         let _ = open::that(url.as_str());
                         NewWindowResponse::Deny
@@ -318,22 +311,6 @@ fn main() {
             let separator = PredefinedMenuItem::separator(app)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&toggle_item, &about_item, &separator, &quit])?;
-
-            // ── Hide screen share windows ───────────────────────────────
-            // Screen share windows are allowed to open but immediately hidden
-            // and grouped with the main window via AUMID
-            {
-                app.on_window_event(|_window_label, event| {
-                    if let WindowEvent::Created = event {
-                        // Check if this is a screen share window by label
-                        if _window_label.contains("screen") || _window_label.contains("stream") || _window_label.contains("rtc") {
-                            if let Some(window) = app.get_window(_window_label) {
-                                let _ = window.hide();
-                            }
-                        }
-                    }
-                });
-            }
 
             // ── Close-to-tray ───────────────────────────────────────────
             // Like Vesktop: clicking X hides to tray instead of quitting.
