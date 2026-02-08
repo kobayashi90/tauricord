@@ -15,7 +15,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["deb", "nsis"],
+    "targets": ["appimage", "deb", "nsis"],
     "icon": ["icons/icon.png"],
     "resources": [],
     "windows": {
