@@ -25,7 +25,7 @@ modules:
       - type: git
         url: https://github.com/AyatanaIndicators/libayatana-appindicator.git
         tag: "0.5.91"
-        commit: 2e6ae8c8e3b57c8b8ef69e6e3c3e2e3c1f1e1d1c
+        commit: f225dccbd82f48bb1ab10767b9b074e24fedb0f3
 
   - name: tauricord
     buildsystem: simple
