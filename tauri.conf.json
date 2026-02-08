@@ -9,12 +9,6 @@
   "app": {
     "windows": []
   },
-  "security": {
-    "csp": null,
-    "devTools": {
-      "enable": true
-    }
-  },
   "plugins": {
     "fs": {},
     "dialog": {}

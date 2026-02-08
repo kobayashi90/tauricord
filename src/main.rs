@@ -396,6 +396,9 @@ fn main() {
                 })
                 .build()?;
 
+            #[cfg(debug_assertions)]
+            main_window.open_devtools();
+
             #[cfg(feature = "with-tray")]
             let _unused_release = &main_window;
 
