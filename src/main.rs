@@ -25,6 +25,15 @@ use base64::Engine;
 /// or WebView2 can handle it at the native level.
 const INIT_SCRIPT: &str = r#"
 (function() {
+    // Debug: log what Discord will see
+    console.log('=== INIT_SCRIPT DEBUG ===');
+    console.log('navigator.userAgent:', navigator.userAgent);
+    console.log('navigator.userAgentData:', navigator.userAgentData);
+    console.log('window.chrome:', window.chrome);
+    console.log('navigator.webdriver:', navigator.webdriver);
+    console.log('navigator.platform:', navigator.platform);
+    console.log('navigator.vendor:', navigator.vendor);
+    
     // 0. Spoof browser identity so Discord enables voice/video/screenshare
     Object.defineProperty(navigator, 'userAgentData', {
         get: () => ({
@@ -71,6 +80,15 @@ const INIT_SCRIPT: &str = r#"
         get: () => false
     });
 
+    // Debug: log after spoofing
+    setTimeout(() => {
+        console.log('=== AFTER SPOOFING ===');
+        console.log('navigator.userAgent:', navigator.userAgent);
+        console.log('navigator.userAgentData:', navigator.userAgentData);
+        console.log('window.chrome:', window.chrome);
+        console.log('navigator.webdriver:', navigator.webdriver);
+    }, 100);
+
     // 1. Hide Discord's in-app screen-share notification bar via CSS
     const style = document.createElement('style');
     style.textContent = `
@@ -113,23 +131,7 @@ const INIT_SCRIPT: &str = r#"
         };
     }
 
-    // 4. Fix drag-and-drop: prevent event bubbling blocks
-    document.addEventListener('dragover', (e) => {
-        e.preventDefault();
-    }, false);
-    document.addEventListener('drop', (e) => {
-        e.preventDefault();
-    }, false);
-    if (document.body) {
-        document.body.addEventListener('dragover', (e) => {
-            e.preventDefault();
-        }, false);
-        document.body.addEventListener('drop', (e) => {
-            e.preventDefault();
-        }, false);
-    }
-
-    // 5. Redirect window.open() to the default browser.
+    // 4. Redirect window.open() to the default browser.
     //    Runs before Discord's JS so we catch every call.
     const originalOpen = window.open;
     window.open = function(url, ...args) {
