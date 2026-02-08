@@ -24,10 +24,12 @@ finish-args:
 modules:
 
   - name: webkit2gtk
-    buildsystem: autotools
+    buildsystem: cmake-ninja
     config-opts:
-      - --disable-gtk-doc
-      - --disable-geolocation
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DPORT=GTK
+      - -DENABLE_DOCUMENTATION=OFF
+      - -DENABLE_GEOLOCATION=OFF
     sources:
       - type: archive
         url: https://webkitgtk.org/releases/webkitgtk-2.42.5.tar.xz
