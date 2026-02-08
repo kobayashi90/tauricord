@@ -16,60 +16,7 @@ finish-args:
   - --filesystem=xdg-download
 
 modules:
-  - name: gnome-common
-    buildsystem: autotools
-    sources:
-      - type: archive
-        url: https://download.gnome.org/sources/gnome-common/3.18/gnome-common-3.18.0.tar.xz
-        sha256: 22569e370ae755e04527b76328befc4c73b62bfd4a572499fde116b8318af8cf
 
-  - name: intltool
-    buildsystem: autotools
-    sources:
-      - type: archive
-        url: https://launchpad.net/intltool/trunk/0.51.0/+download/intltool-0.51.0.tar.gz
-        sha256: 67c74d94196b153b774ab9f89b2fa6c6ba79352407037c8c14d5aeb334e959cd
-
-  - name: libdbusmenu-gtk
-    buildsystem: autotools
-    config-opts:
-      - --prefix=/app
-      - --disable-tests
-      - --disable-gtk2
-      - --disable-dumper
-      - --disable-valgrind
-    sources:
-      - type: archive
-        url: http://archive.ubuntu.com/ubuntu/pool/main/libd/libdbusmenu/libdbusmenu_16.04.1+18.10.20180917.orig.tar.gz
-        sha256: 9be5dc0f2657a9eb76b02d2cdfafa4490652c70bcdfafba5574c505afd2bbe79
-    build-commands:
-      - find . -name "configure.ac" -exec sed -i '/VALGRIND/d' {} \;
-      - find . -name "Makefile.am" -exec sed -i '/if HAVE_VALGRIND/,/^endif/d' {} \;
-      - find . -name "Makefile.am" -exec sed -i '/else/,/^endif/d' {} \;
-      - autoreconf -fiv
-      - ./configure $CONFIGURE_ARGS
-      - make
-      - make install
-
-  - name: libayatana-indicator
-    buildsystem: cmake
-    config-opts:
-      - -DCMAKE_INSTALL_PREFIX=/app
-      - -DENABLE_TESTS=OFF
-    sources:
-      - type: archive
-        url: https://archive.ubuntu.com/ubuntu/pool/universe/liba/libayatana-indicator/libayatana-indicator_0.6.3.orig.tar.gz
-        sha256: fd2faee499e9f6fb23bb103daea17a91ee480f8e57a2114ed4ec490127203ff9
-
-  - name: libayatana-appindicator
-    buildsystem: cmake
-    config-opts:
-      - -DCMAKE_INSTALL_PREFIX=/app
-      - -DENABLE_TESTS=OFF
-    sources:
-      - type: archive
-        url: https://archive.ubuntu.com/ubuntu/pool/universe/liba/libayatana-appindicator/libayatana-appindicator_0.5.4.orig.tar.gz
-        sha256: 824c0435382c2a6544945eccad2c2172741280f718abf7004d0defe1a1164b03
 
   - name: tauricord
     buildsystem: simple
@@ -81,7 +28,7 @@ modules:
         CARGO_HOME: /run/build/tauricord/cargo
         PKG_CONFIG_PATH: /app/lib/pkgconfig
     build-commands:
-      - cargo build --release
+      - cargo build --release --no-default-features
       - install -Dm755 target/release/tauricord /app/bin/tauricord
       - install -Dm644 icons/icon.png /app/share/icons/hicolor/256x256/apps/io.tauricord.dev.png
       - install -Dm644 assets/io.tauricord.dev.desktop /app/share/applications/io.tauricord.dev.desktop
