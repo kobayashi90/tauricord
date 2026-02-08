@@ -25,6 +25,38 @@ use base64::Engine;
 /// or WebView2 can handle it at the native level.
 const INIT_SCRIPT: &str = r#"
 (function() {
+    // 0. Spoof browser identity so Discord enables voice/video/screenshare
+    Object.defineProperty(navigator, 'userAgentData', {
+        get: () => ({
+            brands: [
+                { brand: "Chromium", version: "131" },
+                { brand: "Google Chrome", version: "131" },
+                { brand: "Not_A Brand", version: "24" }
+            ],
+            mobile: false,
+            platform: "Linux",
+            getHighEntropyValues: async () => ({
+                brands: [
+                    { brand: "Chromium", version: "131" },
+                    { brand: "Google Chrome", version: "131" },
+                    { brand: "Not_A Brand", version: "24" }
+                ],
+                mobile: false,
+                platform: "Linux",
+                platformVersion: "6.1.0",
+                architecture: "x86",
+                bitness: "64",
+                model: "",
+                uaFullVersion: "131.0.0.0",
+                fullVersionList: [
+                    { brand: "Chromium", version: "131.0.0.0" },
+                    { brand: "Google Chrome", version: "131.0.0.0" },
+                    { brand: "Not_A Brand", version: "24.0.0.0" }
+                ]
+            })
+        })
+    });
+
     // 1. Hide Discord's in-app screen-share notification bar via CSS
     const style = document.createElement('style');
     style.textContent = `
@@ -283,12 +315,21 @@ fn main() {
             // JS) and on_navigation (blocks external URLs in-webview).
             let url = WebviewUrl::External("https://discord.com/app".parse().unwrap());
 
-            let _main_window = WebviewWindowBuilder::new(app, "main", url)
+            let mut builder = WebviewWindowBuilder::new(app, "main", url)
                 .title("Tauricord")
                 .inner_size(800.0, 600.0)
                 .resizable(true)
-                .fullscreen(false)
-                .disable_drag_drop_handler()
+                .fullscreen(false);
+
+            // Only disable Tauri's drag-drop handler on Windows where it
+            // intercepts WebView2's native D&D. On Linux/WebKitGTK, the
+            // default handler is needed for drag-and-drop to work.
+            #[cfg(target_os = "windows")]
+            {
+                builder = builder.disable_drag_drop_handler();
+            }
+
+            let _main_window = builder
                 .user_agent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
                 .initialization_script(INIT_SCRIPT)
                 .on_navigation(|url| {
