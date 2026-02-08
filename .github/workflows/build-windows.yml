@@ -57,7 +57,7 @@ jobs:
           "version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Build Tauri app for Windows
-        run: cargo tauri build
+        run: cargo tauri build -- --bundles nsis
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
