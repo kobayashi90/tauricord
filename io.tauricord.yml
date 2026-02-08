@@ -17,10 +17,11 @@ finish-args:
 
 modules:
   - name: gnome-common
+    buildsystem: autotools
     sources:
-      - type: git
-        url: https://gitlab.gnome.org/GNOME/gnome-common.git
-        tag: "1.0.2"
+      - type: archive
+        url: https://download.gnome.org/sources/gnome-common/1.0/gnome-common-1.0.2.tar.xz
+        sha256: 8d86446cec185b117d9ead3d3c843b12d4bd98f3fc341b02d21c1e3c2decf59d
 
   - name: libdbusmenu-gtk
     buildsystem: autotools
