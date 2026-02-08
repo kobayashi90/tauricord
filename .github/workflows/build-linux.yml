@@ -70,25 +70,6 @@ jobs:
       - name: Build Tauri app for Linux
         run: cargo tauri build
 
-      - name: Rename Linux artifacts with version
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          # Rename AppImage
-          for file in target/release/bundle/appimage/*.AppImage; do
-            if [ -f "$file" ]; then
-              newname="${file%.*}_v${VERSION}.AppImage"
-              mv "$file" "$newname"
-            fi
-          done
-          # Rename deb
-          for file in target/release/bundle/deb/*.deb; do
-            if [ -f "$file" ]; then
-              filename=$(basename "$file" .deb)
-              newname="target/release/bundle/deb/${filename}_v${VERSION}.deb"
-              mv "$file" "$newname"
-            fi
-          done
-
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
