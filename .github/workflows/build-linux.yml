@@ -76,5 +76,5 @@ jobs:
           name: linux-artifacts-v${{ steps.version.outputs.version }}
           path: |
             target/release/bundle/appimage/*.AppImage
-            target/release/bundle/deb/*.deb
+            target/release/bundle/deb/*_amd64.deb
           if-no-files-found: warn
