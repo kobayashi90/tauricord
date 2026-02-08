@@ -3,10 +3,15 @@
 
 use tauri::{
     AppHandle, Manager,
-    WebviewUrl, WebviewWindowBuilder, WindowEvent,
+    WebviewUrl, WebviewWindowBuilder,
+    webview::NewWindowResponse,
+};
+
+#[cfg(feature = "with-tray")]
+use tauri::{
+    WindowEvent,
     menu::{Menu, MenuItem, PredefinedMenuItem},
     image::Image,
-    webview::NewWindowResponse,
 };
 
 #[cfg(feature = "with-tray")]
@@ -98,6 +103,7 @@ fn is_discord_url(url: &tauri::Url) -> bool {
     }
 }
 
+#[cfg(feature = "with-tray")]
 fn show_about_window(app: &AppHandle) {
     eprintln!("show_about_window called");
     
@@ -276,7 +282,7 @@ fn main() {
             // JS) and on_navigation (blocks external URLs in-webview).
             let url = WebviewUrl::External("https://discord.com/app".parse().unwrap());
 
-            let main_window = WebviewWindowBuilder::new(app, "main", url)
+            let _main_window = WebviewWindowBuilder::new(app, "main", url)
                 .title("Tauricord")
                 .inner_size(800.0, 600.0)
                 .resizable(true)
