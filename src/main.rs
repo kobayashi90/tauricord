@@ -25,6 +25,55 @@ use base64::Engine;
 /// or WebView2 can handle it at the native level.
 const INIT_SCRIPT: &str = r#"
 (function() {
+    const invokeTauriCommand = async (cmd, payload) => {
+        if (window.__TAURI__?.core?.invoke) {
+            return window.__TAURI__.core.invoke(cmd, payload);
+        }
+        if (window.__TAURI_INTERNALS__?.invoke) {
+            return window.__TAURI_INTERNALS__.invoke(cmd, payload);
+        }
+        throw new Error('Tauri invoke API unavailable');
+    };
+
+    const isDiscordUrl = (url) => {
+        try {
+            const u = new URL(url, location.origin);
+            return u.hostname === location.hostname
+                || u.hostname.endsWith('.discord.com')
+                || u.hostname === 'discord.com';
+        } catch {
+            return false;
+        }
+    };
+
+    const openExternalUrl = async (url) => {
+        try {
+            await invokeTauriCommand('open_external', { url });
+            return true;
+        } catch (error) {
+            console.error('Failed to open external URL:', url, error);
+            return false;
+        }
+    };
+
+    const parseUnreadCount = (title) => {
+        const match = /^\((\d+)\)\s/.exec(title || '');
+        return match ? Number.parseInt(match[1], 10) : null;
+    };
+
+    let lastUnreadCount = undefined;
+    const syncUnreadBadge = () => {
+        const unreadCount = parseUnreadCount(document.title);
+        if (unreadCount === lastUnreadCount) {
+            return;
+        }
+
+        lastUnreadCount = unreadCount;
+        void invokeTauriCommand('set_unread_badge', { count: unreadCount }).catch((error) => {
+            console.error('Failed to sync unread badge:', unreadCount, error);
+        });
+    };
+
     // Debug: log what Discord will see
     console.log('=== INIT_SCRIPT DEBUG ===');
     console.log('navigator.userAgent:', navigator.userAgent);
@@ -131,20 +180,53 @@ const INIT_SCRIPT: &str = r#"
         };
     }
 
-    // 4. Redirect window.open() to the default browser.
+    // 4. Redirect external links to the default browser.
+    const handleExternalAnchorClick = (event) => {
+        const anchor = event.target?.closest?.('a[href]');
+        if (!anchor) {
+            return;
+        }
+
+        const href = anchor.href;
+        if (!href || isDiscordUrl(href)) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        void openExternalUrl(href);
+    };
+
+    document.addEventListener('click', handleExternalAnchorClick, true);
+    document.addEventListener('auxclick', handleExternalAnchorClick, true);
+
+    const titleElement = document.querySelector('title');
+    if (titleElement) {
+        new MutationObserver(syncUnreadBadge).observe(titleElement, {
+            childList: true,
+            characterData: true,
+            subtree: true,
+        });
+    }
+
+    document.addEventListener('visibilitychange', syncUnreadBadge);
+    window.addEventListener('focus', syncUnreadBadge);
+    window.addEventListener('blur', syncUnreadBadge);
+    setInterval(syncUnreadBadge, 2000);
+    syncUnreadBadge();
+
+    // 5. Redirect window.open() to the default browser.
     //    Runs before Discord's JS so we catch every call.
     const originalOpen = window.open;
     window.open = function(url, ...args) {
         if (url) {
             try {
                 const u = new URL(url, location.origin);
-                const isDiscord = u.hostname === location.hostname
-                    || u.hostname.endsWith('.discord.com')
-                    || u.hostname === 'discord.com';
-                const isExternal = !isDiscord
-                    && (u.protocol === 'http:' || u.protocol === 'https:');
+                const isExternal = !isDiscordUrl(u.toString())
+                    && (u.protocol === 'http:' || u.protocol === 'https:' || u.protocol === 'mailto:');
                 if (isExternal) {
-                    window.__TAURI__.shell.open(url);
+                    void openExternalUrl(u.toString());
                     return null;
                 }
             } catch {}
@@ -165,6 +247,239 @@ fn is_discord_url(url: &tauri::Url) -> bool {
         }
         // about:blank, data:, blob:, etc.
         None => true,
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn windows_badge_label(count: i64) -> Vec<char> {
+    if count > 9 {
+        vec!['9', '+']
+    } else {
+        count.to_string().chars().collect()
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn windows_badge_glyph(ch: char) -> Option<[&'static str; 5]> {
+    match ch {
+        '0' => Some(["111", "101", "101", "101", "111"]),
+        '1' => Some(["010", "110", "010", "010", "111"]),
+        '2' => Some(["111", "001", "111", "100", "111"]),
+        '3' => Some(["111", "001", "111", "001", "111"]),
+        '4' => Some(["101", "101", "111", "001", "001"]),
+        '5' => Some(["111", "100", "111", "001", "111"]),
+        '6' => Some(["111", "100", "111", "101", "111"]),
+        '7' => Some(["111", "001", "001", "010", "010"]),
+        '8' => Some(["111", "101", "111", "101", "111"]),
+        '9' => Some(["111", "101", "111", "001", "111"]),
+        '+' => Some(["000", "010", "111", "010", "000"]),
+        _ => None,
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn windows_blend_pixel(
+    rgba: &mut [u8],
+    width: usize,
+    height: usize,
+    x: i32,
+    y: i32,
+    color: [u8; 4],
+) {
+    if x < 0 || y < 0 {
+        return;
+    }
+
+    let (x, y) = (x as usize, y as usize);
+    if x >= width || y >= height {
+        return;
+    }
+
+    let index = (y * width + x) * 4;
+    let alpha = color[3] as f32 / 255.0;
+    let inverse_alpha = 1.0 - alpha;
+
+    rgba[index] = (color[0] as f32 * alpha + rgba[index] as f32 * inverse_alpha).round() as u8;
+    rgba[index + 1] =
+        (color[1] as f32 * alpha + rgba[index + 1] as f32 * inverse_alpha).round() as u8;
+    rgba[index + 2] =
+        (color[2] as f32 * alpha + rgba[index + 2] as f32 * inverse_alpha).round() as u8;
+    rgba[index + 3] = ((color[3] as f32) + rgba[index + 3] as f32 * inverse_alpha)
+        .round()
+        .clamp(0.0, 255.0) as u8;
+}
+
+#[cfg(target_os = "windows")]
+fn windows_fill_rounded_rect(
+    rgba: &mut [u8],
+    width: usize,
+    height: usize,
+    x: i32,
+    y: i32,
+    rect_width: i32,
+    rect_height: i32,
+    radius: i32,
+    color: [u8; 4],
+) {
+    let radius = radius.max(0).min(rect_width / 2).min(rect_height / 2);
+
+    for py in y..(y + rect_height) {
+        for px in x..(x + rect_width) {
+            let inside = if radius == 0 {
+                true
+            } else if px < x + radius && py < y + radius {
+                let dx = px - (x + radius);
+                let dy = py - (y + radius);
+                dx * dx + dy * dy <= radius * radius
+            } else if px >= x + rect_width - radius && py < y + radius {
+                let dx = px - (x + rect_width - radius - 1);
+                let dy = py - (y + radius);
+                dx * dx + dy * dy <= radius * radius
+            } else if px < x + radius && py >= y + rect_height - radius {
+                let dx = px - (x + radius);
+                let dy = py - (y + rect_height - radius - 1);
+                dx * dx + dy * dy <= radius * radius
+            } else if px >= x + rect_width - radius && py >= y + rect_height - radius {
+                let dx = px - (x + rect_width - radius - 1);
+                let dy = py - (y + rect_height - radius - 1);
+                dx * dx + dy * dy <= radius * radius
+            } else {
+                true
+            };
+
+            if inside {
+                windows_blend_pixel(rgba, width, height, px, py, color);
+            }
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn windows_draw_glyph(
+    rgba: &mut [u8],
+    width: usize,
+    height: usize,
+    x: i32,
+    y: i32,
+    ch: char,
+    scale: i32,
+    color: [u8; 4],
+) {
+    let Some(glyph) = windows_badge_glyph(ch) else {
+        return;
+    };
+
+    for (row_index, row) in glyph.iter().enumerate() {
+        for (column_index, bit) in row.chars().enumerate() {
+            if bit != '1' {
+                continue;
+            }
+
+            for sy in 0..scale {
+                for sx in 0..scale {
+                    windows_blend_pixel(
+                        rgba,
+                        width,
+                        height,
+                        x + (column_index as i32 * scale) + sx,
+                        y + (row_index as i32 * scale) + sy,
+                        color,
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn windows_overlay_icon(count: i64) -> tauri::image::Image<'static> {
+    const ICON_SIZE: usize = 32;
+    let mut rgba = vec![0_u8; ICON_SIZE * ICON_SIZE * 4];
+
+    let label = windows_badge_label(count);
+    let scale = if label.len() >= 3 { 2 } else { 3 };
+    let spacing = if scale == 2 { 1 } else { 2 };
+    let glyph_width = 3 * scale;
+    let glyph_height = 5 * scale;
+    let label_width = (label.len() as i32 * glyph_width)
+        + ((label.len().saturating_sub(1)) as i32 * spacing);
+    let badge_height = glyph_height + 6;
+    let badge_width = (label_width + 8).max(badge_height);
+    let badge_x = ((ICON_SIZE as i32 - badge_width) / 2).max(0);
+    let badge_y = ((ICON_SIZE as i32 - badge_height) / 2).max(0);
+
+    windows_fill_rounded_rect(
+        &mut rgba,
+        ICON_SIZE,
+        ICON_SIZE,
+        badge_x,
+        badge_y,
+        badge_width,
+        badge_height,
+        badge_height / 2,
+        [0xED, 0x42, 0x45, 0xFF],
+    );
+
+    let text_x = badge_x + ((badge_width - label_width) / 2);
+    let text_y = badge_y + ((badge_height - glyph_height) / 2);
+
+    for (index, ch) in label.iter().enumerate() {
+        windows_draw_glyph(
+            &mut rgba,
+            ICON_SIZE,
+            ICON_SIZE,
+            text_x + index as i32 * (glyph_width + spacing),
+            text_y,
+            *ch,
+            scale,
+            [0xFF, 0xFF, 0xFF, 0xFF],
+        );
+    }
+
+    tauri::image::Image::new_owned(rgba, ICON_SIZE as u32, ICON_SIZE as u32)
+}
+
+#[tauri::command]
+fn open_external(url: String) -> Result<(), String> {
+    let parsed = tauri::Url::parse(&url).map_err(|e| e.to_string())?;
+    match parsed.scheme() {
+        "http" | "https" | "mailto" => {}
+        scheme => return Err(format!("unsupported external URL scheme: {scheme}")),
+    }
+
+    open::that(url).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_unread_badge(window: tauri::WebviewWindow, count: Option<i64>) -> Result<(), String> {
+    let count = count.filter(|count| *count > 0);
+
+    #[cfg(target_os = "windows")]
+    {
+        use tauri::UserAttentionType;
+
+        let overlay = count.map(windows_overlay_icon);
+
+        window
+            .set_overlay_icon(overlay)
+            .map_err(|e| e.to_string())?;
+
+        let request = if count.is_some() && !window.is_focused().unwrap_or(false) {
+            Some(UserAttentionType::Informational)
+        } else {
+            None
+        };
+
+        window
+            .request_user_attention(request)
+            .map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        window.set_badge_count(count).map_err(|e| e.to_string())?;
+        Ok(())
     }
 }
 
@@ -341,6 +656,7 @@ fn show_about_window(app: &AppHandle) {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .invoke_handler(tauri::generate_handler![open_external, set_unread_badge])
         .setup(|app| {
             // ── Create the main window programmatically ─────────────
             // This lets us use initialization_script (runs before page
