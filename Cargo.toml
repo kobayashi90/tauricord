@@ -27,6 +27,7 @@ tauri-plugin-shell = "2"
 open = "5"
 urlencoding = "2"
 base64 = "0.22"
+tauri-plugin-single-instance = "2"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_Controls", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_System_LibraryLoader"] }

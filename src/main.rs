@@ -21,6 +21,11 @@ static WINDOWS_TASKBAR_READY: OnceLock<Mutex<HashMap<isize, bool>>> = OnceLock::
 #[cfg(target_os = "windows")]
 static WINDOWS_TASKBAR_BUTTON_CREATED_MSG: OnceLock<u32> = OnceLock::new();
 
+/// Registered window message sent by a second instance to tell the first
+/// instance to raise itself. Set once in `enforce_single_instance()`.
+#[cfg(target_os = "windows")]
+static TAURICORD_FOCUS_MSG: OnceLock<u32> = OnceLock::new();
+
 #[cfg(feature = "with-tray")]
 use tauri::{
     AppHandle,
@@ -438,6 +443,54 @@ fn is_discord_url(url: &tauri::Url) -> bool {
     }
 }
 
+/// Single-instance guard using a named Win32 mutex — runs at the very start
+/// of `main()` before Tauri initialises anything.
+///
+/// * First instance: creates the mutex (initial owner), registers a unique
+///   window message for "please focus me" signals, and returns.
+/// * Second instance: mutex already exists → broadcasts the focus message to
+///   all top-level windows so the first instance can react, then exits.
+#[cfg(target_os = "windows")]
+fn enforce_single_instance() {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        PostMessageW, RegisterWindowMessageW, HWND_BROADCAST,
+    };
+
+    // Raw FFI: CreateMutexW lives in kernel32.dll which is always linked on
+    // Windows. windows-sys 0.59 does not expose it under Win32::System::Threading
+    // so we declare it directly.
+    extern "system" {
+        fn CreateMutexW(
+            lp_mutex_attributes: *const u8,
+            b_initial_owner: i32,
+            lp_name: *const u16,
+        ) -> *mut u8;
+        fn GetLastError() -> u32;
+    }
+    const ERROR_ALREADY_EXISTS: u32 = 183;
+
+    let focus_name: Vec<u16> = "io.tauricord.dev.focus\0".encode_utf16().collect();
+    let mutex_name: Vec<u16> = "Local\\io.tauricord.dev.single\0".encode_utf16().collect();
+
+    unsafe {
+        // Register a system-wide unique message ID for focus requests.
+        let focus_msg = RegisterWindowMessageW(focus_name.as_ptr());
+        let _ = TAURICORD_FOCUS_MSG.set(focus_msg);
+
+        // Create (or open) the named mutex.
+        // ERROR_ALREADY_EXISTS means another instance already owns it.
+        CreateMutexW(std::ptr::null(), 1, mutex_name.as_ptr());
+        if GetLastError() == ERROR_ALREADY_EXISTS {
+            // Broadcast the focus message — the first instance's subclassed
+            // WndProc will receive it and bring its window to the front.
+            PostMessageW(HWND_BROADCAST, focus_msg, 0, 0);
+            std::process::exit(0);
+        }
+        // First instance: keep the handle open (leaked intentionally).
+        // The OS releases the mutex when this process exits.
+    }
+}
+
 #[cfg(target_os = "windows")]
 fn set_windows_app_id(app_id: &str) {
     use windows_sys::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
@@ -530,6 +583,20 @@ unsafe extern "system" fn windows_taskbar_subclass_proc(
 
     if msg == windows_taskbar_button_created_message() {
         set_windows_taskbar_ready(hwnd as isize, true);
+    }
+
+    // A second instance broadcast this message asking us to raise the window.
+    if let Some(&focus_msg) = TAURICORD_FOCUS_MSG.get() {
+        if msg == focus_msg {
+            use windows_sys::Win32::UI::WindowsAndMessaging::{
+                IsIconic, SetForegroundWindow, ShowWindow, SW_RESTORE,
+            };
+            if IsIconic(hwnd) != 0 {
+                ShowWindow(hwnd, SW_RESTORE);
+            }
+            SetForegroundWindow(hwnd);
+            return 0;
+        }
     }
 
     unsafe { DefSubclassProc(hwnd, msg, wparam, lparam) }
@@ -780,9 +847,20 @@ fn show_about_window(app: &AppHandle) {
 
 fn main() {
     #[cfg(target_os = "windows")]
+    enforce_single_instance();
+
+    #[cfg(target_os = "windows")]
     set_windows_app_id(WINDOWS_APP_ID);
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            // A second instance was launched — focus the existing window.
+            if let Some(win) = app.get_webview_window("main") {
+                let _ = win.show();
+                let _ = win.unminimize();
+                let _ = win.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![open_external, set_unread_badge])
         .setup(|app| {
