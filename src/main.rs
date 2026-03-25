@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use tauri::{
-    WebviewUrl, WebviewWindowBuilder,
+    WebviewUrl, WebviewWindowBuilder, Manager,
     webview::NewWindowResponse,
 };
 
@@ -23,7 +23,7 @@ static WINDOWS_TASKBAR_BUTTON_CREATED_MSG: OnceLock<u32> = OnceLock::new();
 
 #[cfg(feature = "with-tray")]
 use tauri::{
-    AppHandle, Manager,
+    AppHandle,
     WindowEvent,
     menu::{Menu, MenuItem, PredefinedMenuItem},
     image::Image,
