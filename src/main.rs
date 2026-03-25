@@ -6,6 +6,21 @@ use tauri::{
     webview::NewWindowResponse,
 };
 
+#[cfg(target_os = "windows")]
+use std::{collections::HashMap, sync::{Mutex, OnceLock}};
+
+#[cfg(target_os = "windows")]
+const WINDOWS_APP_ID: &str = "io.tauricord.dev";
+
+#[cfg(target_os = "windows")]
+const WINDOWS_TASKBAR_SUBCLASS_ID: usize = 1;
+
+#[cfg(target_os = "windows")]
+static WINDOWS_TASKBAR_READY: OnceLock<Mutex<HashMap<isize, bool>>> = OnceLock::new();
+
+#[cfg(target_os = "windows")]
+static WINDOWS_TASKBAR_BUTTON_CREATED_MSG: OnceLock<u32> = OnceLock::new();
+
 #[cfg(feature = "with-tray")]
 use tauri::{
     AppHandle, Manager,
@@ -25,14 +40,26 @@ use base64::Engine;
 /// or WebView2 can handle it at the native level.
 const INIT_SCRIPT: &str = r#"
 (function() {
-    const invokeTauriCommand = async (cmd, payload) => {
-        if (window.__TAURI__?.core?.invoke) {
-            return window.__TAURI__.core.invoke(cmd, payload);
+    // Force Tauri IPC to always use the postMessage transport instead of the
+    // http://ipc.localhost fetch path, which Discord's CSP would block and log
+    // as a console error. Rejecting ipc.localhost fetches immediately makes
+    // Tauri fall back to postMessage silently on the very first call.
+    const _origFetch = window.fetch;
+    window.fetch = function(url, ...args) {
+        if (typeof url === 'string' && url.startsWith('http://ipc.localhost/')) {
+            return Promise.reject(new TypeError('IPC: use postMessage'));
         }
-        if (window.__TAURI_INTERNALS__?.invoke) {
-            return window.__TAURI_INTERNALS__.invoke(cmd, payload);
+        return _origFetch.call(this, url, ...args);
+    };
+
+    const invokeTauriCommand = (cmd, payload) => {
+        const invoke = window.__TAURI__?.core?.invoke ?? window.__TAURI_INTERNALS__?.invoke;
+        if (!invoke) {
+            return Promise.resolve();
         }
-        throw new Error('Tauri invoke API unavailable');
+        return invoke(cmd, payload).catch((err) => {
+            console.debug(`[IPC] ${cmd} failed:`, err?.message ?? err);
+        });
     };
 
     const isDiscordUrl = (url) => {
@@ -46,9 +73,10 @@ const INIT_SCRIPT: &str = r#"
         }
     };
 
-    const openExternalUrl = async (url) => {
+    const openExternalUrl = (url) => {
         try {
-            await invokeTauriCommand('open_external', { url });
+            const absoluteUrl = new URL(url, location.origin).toString();
+            window.location.assign(absoluteUrl);
             return true;
         } catch (error) {
             console.error('Failed to open external URL:', url, error);
@@ -61,28 +89,168 @@ const INIT_SCRIPT: &str = r#"
         return match ? Number.parseInt(match[1], 10) : null;
     };
 
-    let lastUnreadCount = undefined;
-    const syncUnreadBadge = () => {
-        const unreadCount = parseUnreadCount(document.title);
-        if (unreadCount === lastUnreadCount) {
-            return;
+    const discordStores = {
+        guildRead: null,
+        relationship: null,
+        notificationSettings: null,
+    };
+    let storeSearchFailed = false;
+
+    const subscribedDiscordStores = new WeakSet();
+
+    const isStoreCandidate = (candidate) => candidate && typeof candidate === 'object';
+
+    const getStoreName = (candidate) => {
+        if (!isStoreCandidate(candidate)) {
+            return null;
         }
 
-        lastUnreadCount = unreadCount;
-        void invokeTauriCommand('set_unread_badge', { count: unreadCount }).catch((error) => {
-            console.error('Failed to sync unread badge:', unreadCount, error);
-        });
+        let getName;
+        try { getName = typeof candidate.getName === 'function' && candidate.getName.length === 0 ? candidate.getName() : undefined; } catch (_) { getName = undefined; }
+        const names = [
+            getName,
+            candidate.displayName,
+            candidate.persistKey,
+            candidate.constructor?.displayName,
+            candidate.constructor?.persistKey,
+            candidate.constructor?.name,
+        ];
+
+        for (const name of names) {
+            if (typeof name === 'string' && name.length > 0) {
+                return name;
+            }
+        }
+
+        return null;
     };
 
-    // Debug: log what Discord will see
-    console.log('=== INIT_SCRIPT DEBUG ===');
-    console.log('navigator.userAgent:', navigator.userAgent);
-    console.log('navigator.userAgentData:', navigator.userAgentData);
-    console.log('window.chrome:', window.chrome);
-    console.log('navigator.webdriver:', navigator.webdriver);
-    console.log('navigator.platform:', navigator.platform);
-    console.log('navigator.vendor:', navigator.vendor);
-    
+    const subscribeToDiscordStore = (store, name) => {
+        if (!store || typeof store.addChangeListener !== 'function' || subscribedDiscordStores.has(store)) {
+            return;
+        }
+        store.addChangeListener(syncUnreadBadge);
+        subscribedDiscordStores.add(store);
+    };
+
+    const subscribeToResolvedDiscordStores = () => {
+        subscribeToDiscordStore(discordStores.guildRead, 'GuildReadStateStore');
+        subscribeToDiscordStore(discordStores.relationship, 'RelationshipStore');
+        subscribeToDiscordStore(discordStores.notificationSettings, 'NotificationSettingsStore');
+    };
+
+    const resolveDiscordStores = () => {
+        if (discordStores.guildRead && discordStores.relationship && discordStores.notificationSettings) {
+            subscribeToResolvedDiscordStores();
+            return discordStores;
+        }
+
+        if (storeSearchFailed) return null;
+
+        const chunk = window.webpackChunkdiscord_app;
+        if (!Array.isArray(chunk) || typeof chunk.push !== 'function') {
+            return null;
+        }
+
+        let webpackRequire;
+        try {
+            chunk.push([[Symbol('tauricord-badge')], {}, (req) => {
+                webpackRequire = req;
+            }]);
+        } catch (err) {
+            return null;
+        }
+
+        const modules = Object.values(webpackRequire?.c || {});
+        let found = 0;
+        
+        for (const module of modules) {
+            const exported = module?.exports;
+            const candidates = [
+                exported,
+                exported?.default,
+                ...(isStoreCandidate(exported) ? Object.values(exported) : []),
+            ];
+
+            for (const candidate of candidates) {
+                if (!isStoreCandidate(candidate)) {
+                    continue;
+                }
+
+                const storeName = getStoreName(candidate);
+
+                if (!discordStores.guildRead
+                    && (storeName === 'GuildReadStateStore'
+                        || (typeof candidate.getTotalMentionCount === 'function'
+                            && typeof candidate.hasAnyUnread === 'function'))) {
+                    discordStores.guildRead = candidate;
+                    found++;
+                }
+
+                if (!discordStores.relationship
+                    && (storeName === 'RelationshipStore'
+                        || typeof candidate.getPendingCount === 'function')) {
+                    discordStores.relationship = candidate;
+                    found++;
+                }
+
+                if (!discordStores.notificationSettings
+                    && (storeName === 'NotificationSettingsStore'
+                        || typeof candidate.getDisableUnreadBadge === 'function')) {
+                    discordStores.notificationSettings = candidate;
+                    found++;
+                }
+            }
+
+            if (discordStores.guildRead && discordStores.relationship && discordStores.notificationSettings) {
+                subscribeToResolvedDiscordStores();
+                return discordStores;
+            }
+        }
+
+        if (discordStores.guildRead && discordStores.relationship && discordStores.notificationSettings) {
+            subscribeToResolvedDiscordStores();
+            return discordStores;
+        }
+
+        storeSearchFailed = true;
+        return null;
+    };
+
+    const getDiscordUnreadCount = () => {
+        const stores = resolveDiscordStores();
+        if (!stores) return undefined;
+
+        try {
+            const mentionCount = Number(stores.guildRead.getTotalMentionCount?.() || 0);
+            const pendingRequests = Number(stores.relationship.getPendingCount?.() || 0);
+            const hasUnread = Boolean(stores.guildRead.hasAnyUnread?.());
+            const disableUnreadBadge = Boolean(stores.notificationSettings.getDisableUnreadBadge?.());
+
+            let totalCount = mentionCount + pendingRequests;
+            if (!totalCount && hasUnread && !disableUnreadBadge) {
+                totalCount = -1;
+            }
+
+            return totalCount === 0 ? null : totalCount;
+        } catch (_) {
+            return undefined;
+        }
+    };
+
+    let lastUnreadCount = undefined;
+    const syncUnreadBadge = () => {
+        const unreadCount = getDiscordUnreadCount();
+        const count = unreadCount === undefined
+            ? parseUnreadCount(document.title)
+            : unreadCount;
+
+        if (count === lastUnreadCount) return;
+        lastUnreadCount = count;
+
+        void invokeTauriCommand('set_unread_badge', { count }).catch(() => {});
+    };
+
     // 0. Spoof browser identity so Discord enables voice/video/screenshare
     Object.defineProperty(navigator, 'userAgentData', {
         get: () => ({
@@ -115,28 +283,29 @@ const INIT_SCRIPT: &str = r#"
         })
     });
 
-    // Spoof window.chrome to make Discord think it's Chrome
-    Object.defineProperty(window, 'chrome', {
-        get: () => ({
-            runtime: {},
-            webstore: {}
-        }),
-        configurable: true
-    });
+    // Spoof window.chrome to make Discord think it's Chrome.
+    // This may fail if Chrome or Discord has already sealed the property; catch
+    // and fall back to augmenting the existing object so the script keeps running.
+    try {
+        Object.defineProperty(window, 'chrome', {
+            get: () => ({
+                runtime: {},
+                webstore: {}
+            }),
+            configurable: true
+        });
+    } catch (_) {
+        // Already defined and non-configurable – just patch missing members
+        if (window.chrome) {
+            window.chrome.runtime  = window.chrome.runtime  || {};
+            window.chrome.webstore = window.chrome.webstore || {};
+        }
+    }
 
     // Hide that we're using Tauri/WebKit
     Object.defineProperty(navigator, 'webdriver', {
         get: () => false
     });
-
-    // Debug: log after spoofing
-    setTimeout(() => {
-        console.log('=== AFTER SPOOFING ===');
-        console.log('navigator.userAgent:', navigator.userAgent);
-        console.log('navigator.userAgentData:', navigator.userAgentData);
-        console.log('window.chrome:', window.chrome);
-        console.log('navigator.webdriver:', navigator.webdriver);
-    }, 100);
 
     // 1. Hide Discord's in-app screen-share notification bar via CSS
     const style = document.createElement('style');
@@ -195,25 +364,40 @@ const INIT_SCRIPT: &str = r#"
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation?.();
-        void openExternalUrl(href);
+        openExternalUrl(href);
     };
 
     document.addEventListener('click', handleExternalAnchorClick, true);
     document.addEventListener('auxclick', handleExternalAnchorClick, true);
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') {
+            return;
+        }
 
-    const titleElement = document.querySelector('title');
-    if (titleElement) {
-        new MutationObserver(syncUnreadBadge).observe(titleElement, {
-            childList: true,
-            characterData: true,
-            subtree: true,
-        });
+        handleExternalAnchorClick(event);
+    }, true);
+
+    const setupTitleObserver = () => {
+        const el = document.querySelector('title');
+        if (el) {
+            new MutationObserver(syncUnreadBadge).observe(el, {
+                childList: true,
+                characterData: true,
+                subtree: true,
+            });
+        }
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupTitleObserver);
+    } else {
+        setupTitleObserver();
     }
 
     document.addEventListener('visibilitychange', syncUnreadBadge);
     window.addEventListener('focus', syncUnreadBadge);
     window.addEventListener('blur', syncUnreadBadge);
     setInterval(syncUnreadBadge, 2000);
+    
     syncUnreadBadge();
 
     // 5. Redirect window.open() to the default browser.
@@ -226,7 +410,11 @@ const INIT_SCRIPT: &str = r#"
                 const isExternal = !isDiscordUrl(u.toString())
                     && (u.protocol === 'http:' || u.protocol === 'https:' || u.protocol === 'mailto:');
                 if (isExternal) {
-                    void openExternalUrl(u.toString());
+                    try {
+                        return originalOpen.call(this, u.toString(), '_blank', 'noopener,noreferrer');
+                    } catch {
+                        openExternalUrl(u.toString());
+                    }
                     return null;
                 }
             } catch {}
@@ -251,192 +439,149 @@ fn is_discord_url(url: &tauri::Url) -> bool {
 }
 
 #[cfg(target_os = "windows")]
-fn windows_badge_label(count: i64) -> Vec<char> {
-    if count > 9 {
-        vec!['9', '+']
-    } else {
-        count.to_string().chars().collect()
+fn set_windows_app_id(app_id: &str) {
+    use windows_sys::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
+
+    let wide: Vec<u16> = app_id.encode_utf16().chain(std::iter::once(0)).collect();
+
+    unsafe {
+        let _ = SetCurrentProcessExplicitAppUserModelID(wide.as_ptr());
     }
 }
 
 #[cfg(target_os = "windows")]
-fn windows_badge_glyph(ch: char) -> Option<[&'static str; 5]> {
-    match ch {
-        '0' => Some(["111", "101", "101", "101", "111"]),
-        '1' => Some(["010", "110", "010", "010", "111"]),
-        '2' => Some(["111", "001", "111", "100", "111"]),
-        '3' => Some(["111", "001", "111", "001", "111"]),
-        '4' => Some(["101", "101", "111", "001", "001"]),
-        '5' => Some(["111", "100", "111", "001", "111"]),
-        '6' => Some(["111", "100", "111", "101", "111"]),
-        '7' => Some(["111", "001", "001", "010", "010"]),
-        '8' => Some(["111", "101", "111", "101", "111"]),
-        '9' => Some(["111", "101", "111", "001", "111"]),
-        '+' => Some(["000", "010", "111", "010", "000"]),
-        _ => None,
+fn windows_overlay_icon(count: Option<i64>) -> Option<tauri::image::Image<'static>> {
+    // Small 16×16 badge dot for ITaskbarList3::SetOverlayIcon.
+    // None = clear the overlay; the main window HICON is set explicitly
+    // on the builder via .icon() and is never disturbed by overlay changes.
+    let bytes: &'static [u8] = match count {
+        None => return None,
+        Some(c) if c < 0 => include_bytes!(concat!(env!("OUT_DIR"), "/badge-unread.png")),
+        Some(1) => include_bytes!(concat!(env!("OUT_DIR"), "/badge-1.png")),
+        Some(2) => include_bytes!(concat!(env!("OUT_DIR"), "/badge-2.png")),
+        Some(3) => include_bytes!(concat!(env!("OUT_DIR"), "/badge-3.png")),
+        Some(4) => include_bytes!(concat!(env!("OUT_DIR"), "/badge-4.png")),
+        Some(5) => include_bytes!(concat!(env!("OUT_DIR"), "/badge-5.png")),
+        Some(6) => include_bytes!(concat!(env!("OUT_DIR"), "/badge-6.png")),
+        Some(7) => include_bytes!(concat!(env!("OUT_DIR"), "/badge-7.png")),
+        Some(8) => include_bytes!(concat!(env!("OUT_DIR"), "/badge-8.png")),
+        Some(9) => include_bytes!(concat!(env!("OUT_DIR"), "/badge-9.png")),
+        _ => include_bytes!(concat!(env!("OUT_DIR"), "/badge-10.png")),
+    };
+    Some(
+        tauri::image::Image::from_bytes(bytes)
+            .expect("generated Windows badge icon should be valid PNG"),
+    )
+}
+
+#[cfg(target_os = "windows")]
+fn windows_taskbar_ready_map() -> &'static Mutex<HashMap<isize, bool>> {
+    WINDOWS_TASKBAR_READY.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+#[cfg(target_os = "windows")]
+fn windows_taskbar_button_created_message() -> u32 {
+    use windows_sys::Win32::UI::WindowsAndMessaging::RegisterWindowMessageW;
+
+    *WINDOWS_TASKBAR_BUTTON_CREATED_MSG.get_or_init(|| {
+        let wide: Vec<u16> = "TaskbarButtonCreated"
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
+        unsafe { RegisterWindowMessageW(wide.as_ptr()) }
+    })
+}
+
+#[cfg(target_os = "windows")]
+fn windows_hwnd(window: &tauri::WebviewWindow) -> Result<isize, String> {
+    window.hwnd().map(|hwnd| hwnd.0 as isize).map_err(|e| e.to_string())
+}
+
+#[cfg(target_os = "windows")]
+fn set_windows_taskbar_ready(hwnd: isize, ready: bool) {
+    if let Ok(mut ready_map) = windows_taskbar_ready_map().lock() {
+        ready_map.insert(hwnd, ready);
     }
 }
 
 #[cfg(target_os = "windows")]
-fn windows_blend_pixel(
-    rgba: &mut [u8],
-    width: usize,
-    height: usize,
-    x: i32,
-    y: i32,
-    color: [u8; 4],
-) {
-    if x < 0 || y < 0 {
-        return;
-    }
-
-    let (x, y) = (x as usize, y as usize);
-    if x >= width || y >= height {
-        return;
-    }
-
-    let index = (y * width + x) * 4;
-    let alpha = color[3] as f32 / 255.0;
-    let inverse_alpha = 1.0 - alpha;
-
-    rgba[index] = (color[0] as f32 * alpha + rgba[index] as f32 * inverse_alpha).round() as u8;
-    rgba[index + 1] =
-        (color[1] as f32 * alpha + rgba[index + 1] as f32 * inverse_alpha).round() as u8;
-    rgba[index + 2] =
-        (color[2] as f32 * alpha + rgba[index + 2] as f32 * inverse_alpha).round() as u8;
-    rgba[index + 3] = ((color[3] as f32) + rgba[index + 3] as f32 * inverse_alpha)
-        .round()
-        .clamp(0.0, 255.0) as u8;
-}
-
-#[cfg(target_os = "windows")]
-fn windows_fill_rounded_rect(
-    rgba: &mut [u8],
-    width: usize,
-    height: usize,
-    x: i32,
-    y: i32,
-    rect_width: i32,
-    rect_height: i32,
-    radius: i32,
-    color: [u8; 4],
-) {
-    let radius = radius.max(0).min(rect_width / 2).min(rect_height / 2);
-
-    for py in y..(y + rect_height) {
-        for px in x..(x + rect_width) {
-            let inside = if radius == 0 {
-                true
-            } else if px < x + radius && py < y + radius {
-                let dx = px - (x + radius);
-                let dy = py - (y + radius);
-                dx * dx + dy * dy <= radius * radius
-            } else if px >= x + rect_width - radius && py < y + radius {
-                let dx = px - (x + rect_width - radius - 1);
-                let dy = py - (y + radius);
-                dx * dx + dy * dy <= radius * radius
-            } else if px < x + radius && py >= y + rect_height - radius {
-                let dx = px - (x + radius);
-                let dy = py - (y + rect_height - radius - 1);
-                dx * dx + dy * dy <= radius * radius
-            } else if px >= x + rect_width - radius && py >= y + rect_height - radius {
-                let dx = px - (x + rect_width - radius - 1);
-                let dy = py - (y + rect_height - radius - 1);
-                dx * dx + dy * dy <= radius * radius
-            } else {
-                true
-            };
-
-            if inside {
-                windows_blend_pixel(rgba, width, height, px, py, color);
-            }
-        }
-    }
-}
-
-#[cfg(target_os = "windows")]
-fn windows_draw_glyph(
-    rgba: &mut [u8],
-    width: usize,
-    height: usize,
-    x: i32,
-    y: i32,
-    ch: char,
-    scale: i32,
-    color: [u8; 4],
-) {
-    let Some(glyph) = windows_badge_glyph(ch) else {
-        return;
+fn windows_taskbar_ready(window: &tauri::WebviewWindow) -> bool {
+    let Ok(hwnd) = windows_hwnd(window) else {
+        return false;
     };
 
-    for (row_index, row) in glyph.iter().enumerate() {
-        for (column_index, bit) in row.chars().enumerate() {
-            if bit != '1' {
-                continue;
-            }
-
-            for sy in 0..scale {
-                for sx in 0..scale {
-                    windows_blend_pixel(
-                        rgba,
-                        width,
-                        height,
-                        x + (column_index as i32 * scale) + sx,
-                        y + (row_index as i32 * scale) + sy,
-                        color,
-                    );
-                }
-            }
-        }
-    }
+    windows_taskbar_ready_map()
+        .lock()
+        .ok()
+        .and_then(|ready_map| ready_map.get(&hwnd).copied())
+        .unwrap_or(false)
 }
 
 #[cfg(target_os = "windows")]
-fn windows_overlay_icon(count: i64) -> tauri::image::Image<'static> {
-    const ICON_SIZE: usize = 32;
-    let mut rgba = vec![0_u8; ICON_SIZE * ICON_SIZE * 4];
+unsafe extern "system" fn windows_taskbar_subclass_proc(
+    hwnd: windows_sys::Win32::Foundation::HWND,
+    msg: u32,
+    wparam: usize,
+    lparam: isize,
+    _subclass_id: usize,
+    _ref_data: usize,
+) -> isize {
+    use windows_sys::Win32::UI::Shell::DefSubclassProc;
 
-    let label = windows_badge_label(count);
-    let scale = if label.len() >= 3 { 2 } else { 3 };
-    let spacing = if scale == 2 { 1 } else { 2 };
-    let glyph_width = 3 * scale;
-    let glyph_height = 5 * scale;
-    let label_width = (label.len() as i32 * glyph_width)
-        + ((label.len().saturating_sub(1)) as i32 * spacing);
-    let badge_height = glyph_height + 6;
-    let badge_width = (label_width + 8).max(badge_height);
-    let badge_x = ((ICON_SIZE as i32 - badge_width) / 2).max(0);
-    let badge_y = ((ICON_SIZE as i32 - badge_height) / 2).max(0);
-
-    windows_fill_rounded_rect(
-        &mut rgba,
-        ICON_SIZE,
-        ICON_SIZE,
-        badge_x,
-        badge_y,
-        badge_width,
-        badge_height,
-        badge_height / 2,
-        [0xED, 0x42, 0x45, 0xFF],
-    );
-
-    let text_x = badge_x + ((badge_width - label_width) / 2);
-    let text_y = badge_y + ((badge_height - glyph_height) / 2);
-
-    for (index, ch) in label.iter().enumerate() {
-        windows_draw_glyph(
-            &mut rgba,
-            ICON_SIZE,
-            ICON_SIZE,
-            text_x + index as i32 * (glyph_width + spacing),
-            text_y,
-            *ch,
-            scale,
-            [0xFF, 0xFF, 0xFF, 0xFF],
-        );
+    if msg == windows_taskbar_button_created_message() {
+        set_windows_taskbar_ready(hwnd as isize, true);
     }
 
-    tauri::image::Image::new_owned(rgba, ICON_SIZE as u32, ICON_SIZE as u32)
+    unsafe { DefSubclassProc(hwnd, msg, wparam, lparam) }
+}
+
+#[cfg(target_os = "windows")]
+fn install_windows_taskbar_hook(window: &tauri::WebviewWindow) -> Result<(), String> {
+    use windows_sys::Win32::UI::Shell::SetWindowSubclass;
+
+    let hwnd = windows_hwnd(window)?;
+    set_windows_taskbar_ready(hwnd, false);
+
+    let installed = unsafe {
+        SetWindowSubclass(
+            hwnd as _,
+            Some(windows_taskbar_subclass_proc),
+            WINDOWS_TASKBAR_SUBCLASS_ID,
+            0,
+        )
+    } != 0;
+
+    if !installed {
+        return Err("failed to install Windows taskbar subclass".to_string());
+    }
+
+    let delayed_window = window.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(1500));
+        if let Ok(hwnd) = windows_hwnd(&delayed_window) {
+            set_windows_taskbar_ready(hwnd, true);
+        }
+    });
+
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn apply_windows_unread_badge(window: tauri::WebviewWindow, count: Option<i64>) -> Result<(), String> {
+    let apply = move |window: tauri::WebviewWindow, count: Option<i64>| {
+        if !windows_taskbar_ready(&window) {}
+
+        if let Err(error) = window.set_overlay_icon(windows_overlay_icon(count)) {
+            eprintln!("[Badge] Failed to set overlay icon: {error}");
+        }
+    };
+
+    let inner = window.clone();
+    window
+        .run_on_main_thread(move || apply(inner, count))
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -451,33 +596,22 @@ fn open_external(url: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn set_unread_badge(window: tauri::WebviewWindow, count: Option<i64>) -> Result<(), String> {
-    let count = count.filter(|count| *count > 0);
+fn set_unread_badge(app: tauri::AppHandle, count: Option<i64>) -> Result<(), String> {
+    let count = count.filter(|count| *count != 0);
 
     #[cfg(target_os = "windows")]
     {
-        use tauri::UserAttentionType;
-
-        let overlay = count.map(windows_overlay_icon);
-
-        window
-            .set_overlay_icon(overlay)
-            .map_err(|e| e.to_string())?;
-
-        let request = if count.is_some() && !window.is_focused().unwrap_or(false) {
-            Some(UserAttentionType::Informational)
-        } else {
-            None
-        };
-
-        window
-            .request_user_attention(request)
-            .map_err(|e| e.to_string())?;
-        return Ok(());
+        let window = app
+            .get_webview_window("main")
+            .ok_or_else(|| "main window not found".to_string())?;
+        return apply_windows_unread_badge(window, count);
     }
 
     #[cfg(not(target_os = "windows"))]
     {
+        let window = app
+            .get_webview_window("main")
+            .ok_or_else(|| "main window not found".to_string())?;
         window.set_badge_count(count).map_err(|e| e.to_string())?;
         Ok(())
     }
@@ -485,11 +619,8 @@ fn set_unread_badge(window: tauri::WebviewWindow, count: Option<i64>) -> Result<
 
 #[cfg(feature = "with-tray")]
 fn show_about_window(app: &AppHandle) {
-    eprintln!("show_about_window called");
-    
     // If an about window already exists, just focus it
     if let Some(win) = app.get_webview_window("about") {
-        eprintln!("about window already exists, focusing");
         let _ = win.show();
         let _ = win.set_focus();
         return;
@@ -497,10 +628,6 @@ fn show_about_window(app: &AppHandle) {
 
     let version = env!("CARGO_PKG_VERSION");
     let repo = env!("CARGO_PKG_REPOSITORY");
-
-    eprintln!("Creating about window with version={}, repo={}", version, repo);
-
-    // Embed icon as base64 for data: URI compatibility
     let icon_bytes = include_bytes!("../icons/icon.png");
     let icon_base64 = base64::engine::general_purpose::STANDARD.encode(icon_bytes);
     let icon_data_url = format!("data:image/png;base64,{}", icon_base64);
@@ -617,7 +744,6 @@ fn show_about_window(app: &AppHandle) {
 
     let data_url = format!("data:text/html;charset=utf-8,{}", urlencoding::encode(&about_html));
     let about_url = tauri::Url::parse(&data_url).unwrap();
-    eprintln!("Parsed about URL, building window...");
 
     match WebviewWindowBuilder::new(
         app,
@@ -643,7 +769,6 @@ fn show_about_window(app: &AppHandle) {
     .build()
     {
         Ok(win) => {
-            eprintln!("About window built successfully, showing and focusing");
             let _ = win.show();
             let _ = win.set_focus();
         }
@@ -654,6 +779,9 @@ fn show_about_window(app: &AppHandle) {
 }
 
 fn main() {
+    #[cfg(target_os = "windows")]
+    set_windows_app_id(WINDOWS_APP_ID);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![open_external, set_unread_badge])
@@ -665,7 +793,7 @@ fn main() {
 
             #[cfg(target_os = "windows")]
             let main_window = {
-                let mut builder = WebviewWindowBuilder::new(app, "main", url)
+                let builder = WebviewWindowBuilder::new(app, "main", url)
                     .title("Tauricord")
                     .inner_size(800.0, 600.0)
                     .resizable(true)
@@ -712,6 +840,35 @@ fn main() {
                 })
                 .build()?;
 
+            #[cfg(target_os = "windows")]
+            if let Err(error) = install_windows_taskbar_hook(&main_window) {
+                eprintln!("Failed to install Windows taskbar hook: {error}");
+            }
+
+            // Set the window icon from the multi-resolution ICO embedded in the EXE
+            // by tauri-build (resource ID 32512 = IDI_APPLICATION slot).
+            // This is sharper than passing a PNG through Tauri's resize path.
+            #[cfg(target_os = "windows")]
+            if let Ok(hwnd) = main_window.hwnd() {
+                use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
+                use windows_sys::Win32::UI::WindowsAndMessaging::{
+                    LoadIconW, LoadImageW, SendMessageW,
+                    ICON_BIG, ICON_SMALL, IMAGE_ICON, LR_DEFAULTSIZE, WM_SETICON,
+                };
+                unsafe {
+                    let hinst = GetModuleHandleW(std::ptr::null());
+                    // MAKEINTRESOURCEW(32512) — the embedded ICO resource
+                    let res_id = 32512u16 as usize as *const u16;
+                    let big_icon = LoadIconW(hinst, res_id);
+                    // Small icon: explicit 16×16 from the same resource
+                    let small_icon = LoadImageW(
+                        hinst, res_id, IMAGE_ICON, 16, 16, LR_DEFAULTSIZE,
+                    );
+                    SendMessageW(hwnd.0 as _, WM_SETICON, ICON_BIG as _, big_icon as _);
+                    SendMessageW(hwnd.0 as _, WM_SETICON, ICON_SMALL as _, small_icon as _);
+                }
+            }
+
             #[cfg(debug_assertions)]
             main_window.open_devtools();
 
@@ -748,7 +905,6 @@ fn main() {
                     let window = main_window.clone();
                     let toggle_item = toggle_item.clone();
                     app.on_menu_event(move |app_handle, event| {
-                        eprintln!("Menu event: {:?}", event.id);
                         match event.id.as_ref() {
                             "toggle" => {
                                 if window.is_visible().unwrap_or(false) {
@@ -761,7 +917,6 @@ fn main() {
                                 }
                             }
                             "about" => {
-                                eprintln!("About menu clicked!");
                                 show_about_window(app_handle);
                             }
                             "quit" => {

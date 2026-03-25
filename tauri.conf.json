@@ -7,6 +7,7 @@
     "devUrl": "https://discord.com/app"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": []
   },
   "plugins": {

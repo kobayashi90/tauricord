@@ -3851,6 +3851,8 @@ name = "tauricord"
 version = "0.5.0"
 dependencies = [
  "base64 0.22.1",
+ "ico",
+ "image",
  "log",
  "open",
  "serde",
@@ -3862,6 +3864,7 @@ dependencies = [
  "tauri-plugin-log",
  "tauri-plugin-shell",
  "urlencoding",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
