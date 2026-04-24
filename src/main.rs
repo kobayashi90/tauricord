@@ -70,9 +70,13 @@ const INIT_SCRIPT: &str = r#"
     const isDiscordUrl = (url) => {
         try {
             const u = new URL(url, location.origin);
-            return u.hostname === location.hostname
-                || u.hostname.endsWith('.discord.com')
-                || u.hostname === 'discord.com';
+            const host = u.hostname;
+            return host === location.hostname
+                || host === 'discord.com'
+                || host.endsWith('.discord.com')
+                || host === 'hcaptcha.com'
+                || host.endsWith('.hcaptcha.com')
+                || host === 'challenges.cloudflare.com';
         } catch {
             return false;
         }
@@ -389,6 +393,14 @@ const INIT_SCRIPT: &str = r#"
         div[class^='base'] div[class^='bar_'] {
             display: none !important;
         }
+        /* WebKit on Linux can render guild list slightly off-center. */
+        nav[aria-label*='Servers'] [class*='listItem'] {
+            display: flex !important;
+            justify-content: center !important;
+        }
+        nav[aria-label*='Servers'] [class*='wrapper_'] {
+            transform: translateZ(0);
+        }
     `;
     const inject = () => {
         if (document.head) {
@@ -543,6 +555,9 @@ fn is_discord_url(url: &tauri::Url) -> bool {
         Some(host) => {
             host == "discord.com"
                 || host.ends_with(".discord.com")
+                || host == "hcaptcha.com"
+                || host.ends_with(".hcaptcha.com")
+                || host == "challenges.cloudflare.com"
                 || host == "localhost"
         }
         // about:blank, data:, blob:, etc.
@@ -1015,6 +1030,15 @@ fn main() {
                     // window.open, image lightbox "Open in Browser", etc.)
                     // at the native WebView2 level.
                     if is_discord_url(&url) {
+                        // Captcha pages need an in-app popup to complete auth.
+                        if let Some(host) = url.host_str() {
+                            if host == "hcaptcha.com"
+                                || host.ends_with(".hcaptcha.com")
+                                || host == "challenges.cloudflare.com"
+                            {
+                                return NewWindowResponse::Allow;
+                            }
+                        }
                         // Let Discord open popouts etc. by denying
                         // (they'll fall through to window.open override)
                         NewWindowResponse::Deny
