@@ -288,6 +288,29 @@ const INIT_SCRIPT: &str = r#"
         })
     });
 
+    // Capture stable page-load timing once; legacy Chrome APIs should expose
+    // historical load info rather than "time when function was called".
+    const pageLoadStartMs = (() => {
+        const fromTimeOrigin = Number(performance?.timeOrigin);
+        if (Number.isFinite(fromTimeOrigin) && fromTimeOrigin > 0) {
+            return Math.round(fromTimeOrigin);
+        }
+        const fromNavigationStart = Number(performance?.timing?.navigationStart);
+        if (Number.isFinite(fromNavigationStart) && fromNavigationStart > 0) {
+            return Math.round(fromNavigationStart);
+        }
+        return Date.now();
+    })();
+    const pageLoadStartS = pageLoadStartMs / 1000;
+    const chromeCsi = () => ({ onloadT: pageLoadStartMs, startE: pageLoadStartMs });
+    const chromeLoadTimes = () => ({
+        requestTime: pageLoadStartS,
+        startLoadTime: pageLoadStartS,
+        commitLoadTime: pageLoadStartS,
+        finishDocumentLoadTime: pageLoadStartS,
+        finishLoadTime: pageLoadStartS
+    });
+
     // Spoof window.chrome to make Discord think it's Chrome.
     // This may fail if Chrome or Discord has already sealed the property; catch
     // and fall back to augmenting the existing object so the script keeps running.
@@ -295,15 +318,51 @@ const INIT_SCRIPT: &str = r#"
         Object.defineProperty(window, 'chrome', {
             get: () => ({
                 runtime: {},
-                webstore: {}
+                webstore: {},
+                app: {
+                    isInstalled: false,
+                    InstallState: {
+                        DISABLED: 'disabled',
+                        INSTALLED: 'installed',
+                        NOT_INSTALLED: 'not_installed'
+                    },
+                    RunningState: {
+                        CANNOT_RUN: 'cannot_run',
+                        READY_TO_RUN: 'ready_to_run',
+                        RUNNING: 'running'
+                    },
+                    getDetails: () => null,
+                    getIsInstalled: () => false,
+                    runningState: () => 'cannot_run'
+                },
+                csi: chromeCsi,
+                loadTimes: chromeLoadTimes
             }),
             configurable: true
         });
     } catch (_) {
         // Already defined and non-configurable – just patch missing members
         if (window.chrome) {
-            window.chrome.runtime  = window.chrome.runtime  || {};
+            window.chrome.runtime = window.chrome.runtime || {};
             window.chrome.webstore = window.chrome.webstore || {};
+            window.chrome.app = window.chrome.app || {
+                isInstalled: false,
+                InstallState: {
+                    DISABLED: 'disabled',
+                    INSTALLED: 'installed',
+                    NOT_INSTALLED: 'not_installed'
+                },
+                RunningState: {
+                    CANNOT_RUN: 'cannot_run',
+                    READY_TO_RUN: 'ready_to_run',
+                    RUNNING: 'running'
+                },
+                getDetails: () => null,
+                getIsInstalled: () => false,
+                runningState: () => 'cannot_run'
+            };
+            window.chrome.csi = window.chrome.csi || chromeCsi;
+            window.chrome.loadTimes = window.chrome.loadTimes || chromeLoadTimes;
         }
     }
 
@@ -311,6 +370,18 @@ const INIT_SCRIPT: &str = r#"
     Object.defineProperty(navigator, 'webdriver', {
         get: () => false
     });
+
+    // WebRTC constructor aliases for WebKit variants.
+    // We only map existing native implementations, never a fake transport layer.
+    if (!window.RTCPeerConnection && window.webkitRTCPeerConnection) {
+        window.RTCPeerConnection = window.webkitRTCPeerConnection;
+    }
+    if (!window.RTCSessionDescription && window.webkitRTCSessionDescription) {
+        window.RTCSessionDescription = window.webkitRTCSessionDescription;
+    }
+    if (!window.RTCIceCandidate && window.webkitRTCIceCandidate) {
+        window.RTCIceCandidate = window.webkitRTCIceCandidate;
+    }
 
     // 1. Hide Discord's in-app screen-share notification bar via CSS
     const style = document.createElement('style');
@@ -348,11 +419,47 @@ const INIT_SCRIPT: &str = r#"
             try {
                 return await originalGetUserMedia.call(this, constraints);
             } catch (err) {
-                console.log('Media request:', constraints, err);
+                const diagnostic = {
+                    name: err?.name || null,
+                    message: err?.message || null,
+                    constraint: err?.constraint || null,
+                    code: err?.code || null
+                };
+                console.error('[Voice] getUserMedia failed', {
+                    constraints,
+                    diagnostic
+                });
                 throw err;
             }
         };
     }
+
+    const logVoiceCapabilitySnapshot = () => {
+        const mediaDevices = navigator.mediaDevices || null;
+        const audioProto = window.HTMLMediaElement?.prototype;
+        const rtcCtor = window.RTCPeerConnection || null;
+        const webkitRtcCtor = window.webkitRTCPeerConnection || null;
+
+        const snapshot = {
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            hasMediaDevices: Boolean(mediaDevices),
+            hasGetUserMedia: typeof mediaDevices?.getUserMedia === 'function',
+            hasEnumerateDevices: typeof mediaDevices?.enumerateDevices === 'function',
+            hasGetDisplayMedia: typeof mediaDevices?.getDisplayMedia === 'function',
+            hasPermissionsApi: Boolean(navigator.permissions),
+            hasRTCPeerConnection: typeof rtcCtor === 'function',
+            hasWebkitRTCPeerConnection: typeof webkitRtcCtor === 'function',
+            hasRTCSessionDescription: typeof window.RTCSessionDescription === 'function',
+            hasRTCIceCandidate: typeof window.RTCIceCandidate === 'function',
+            hasSetSinkId: typeof audioProto?.setSinkId === 'function',
+            hasAudioContext: typeof window.AudioContext === 'function' || typeof window.webkitAudioContext === 'function',
+            chromeKeys: window.chrome ? Object.keys(window.chrome) : []
+        };
+
+        console.info('[Voice] runtime capability snapshot', snapshot);
+    };
+    logVoiceCapabilitySnapshot();
 
     // 4. Redirect external links to the default browser.
     const handleExternalAnchorClick = (event) => {
