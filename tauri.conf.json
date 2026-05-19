@@ -10,13 +10,9 @@
     "withGlobalTauri": true,
     "windows": []
   },
-  "plugins": {
-    "fs": {},
-    "dialog": {}
-  },
   "bundle": {
     "active": true,
-    "targets": ["deb", "nsis"],
+    "targets": ["deb", "nsis", "dmg", "appimage"],
     "icon": ["icons/icon.png"],
     "resources": [],
     "windows": {

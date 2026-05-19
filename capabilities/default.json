@@ -13,9 +13,6 @@
     "main"
   ],
   "permissions": [
-    "core:default",
-    "shell:default",
-    "fs:allow-read",
-    "fs:scope"
+    "core:default"
   ]
 }

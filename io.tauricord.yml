@@ -13,12 +13,15 @@ finish-args:
   - --socket=wayland
   - --socket=fallback-x11
   - --socket=pulseaudio
+  - --socket=camera
   - --filesystem=xdg-run/pipewire-0
   - --socket=session-bus
   - --device=all
   - --device=dri
   - --filesystem=xdg-download
   - --talk-name=org.freedesktop.portal.Desktop
+  - --talk-name=org.freedesktop.portal.Camera
+  - --talk-name=org.freedesktop.portal.Microphone
   - --env=GDK_SCALE=1
   - --env=GTK3_MODULES=
   - --env=WEBKIT_DISABLE_DMABUF_RENDERER=1
