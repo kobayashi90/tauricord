@@ -40,7 +40,8 @@ jobs:
             libgstreamer-plugins-bad1.0-dev libnice-dev \
             libwebrtc-audio-processing-dev \
             gobject-introspection libgirepository1.0-dev gi-docgen \
-            gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
+            gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
+            libunwind-dev
 
       - name: Extract version
         id: version

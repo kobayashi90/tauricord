@@ -27,7 +27,8 @@ jobs:
             libgstreamer1.0-dev \
             libgstreamer-plugins-base1.0-dev \
             libnice-dev \
-            libwebrtc-audio-processing-dev
+            libwebrtc-audio-processing-dev \
+            libunwind-dev
 
       - name: Install WebRTC-enabled WebKitGTK
         run: |
