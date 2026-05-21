@@ -1,12 +1,4 @@
 (function() {
-    const _origFetch = window.fetch;
-    window.fetch = function(url, ...args) {
-        if (typeof url === 'string' && url.startsWith('http://ipc.localhost/')) {
-            return Promise.reject(new TypeError('IPC: use postMessage'));
-        }
-        return _origFetch.call(this, url, ...args);
-    };
-
     const invokeTauriCommand = (cmd, payload) => {
         const invoke = window.__TAURI__?.core?.invoke ?? window.__TAURI_INTERNALS__?.invoke;
         if (!invoke) {
@@ -35,7 +27,7 @@
     const openExternalUrl = (url) => {
         try {
             const absoluteUrl = new URL(url, location.origin).toString();
-            window.location.assign(absoluteUrl);
+            void invokeTauriCommand('open_external', { url: absoluteUrl });
             return true;
         } catch (error) {
             console.error('Failed to open external URL:', url, error);
@@ -230,22 +222,24 @@
         check();
     };
 
-    let loadingTimer = setTimeout(() => {
-        const hasDiscordContent = document.querySelector('[class^="app"]') || document.querySelector('[class^="layers"]');
-        if (!hasDiscordContent) showErrorOverlay();
-    }, 15000);
+    let loadingCheckAttempts = 0;
+    const MAX_LOADING_ATTEMPTS = 6;
+    const LOADING_CHECK_INTERVAL = 5000;
+
+    const checkDiscordLoaded = () => {
+        loadingCheckAttempts++;
+        const hasContent = document.querySelector('[class^="app"]') || document.querySelector('[class^="layers"]');
+        if (hasContent) { cancelLoadingTimer(); return; }
+        if (loadingCheckAttempts >= MAX_LOADING_ATTEMPTS) showErrorOverlay();
+        else setTimeout(checkDiscordLoaded, LOADING_CHECK_INTERVAL);
+    };
+    setTimeout(checkDiscordLoaded, LOADING_CHECK_INTERVAL);
 
     const cancelLoadingTimer = () => {
-        clearTimeout(loadingTimer);
+        loadingCheckAttempts = MAX_LOADING_ATTEMPTS;
         const el = document.getElementById(ERROR_OVERLAY_ID);
         if (el) el.remove();
     };
-
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => {
-            if (document.querySelector('[class^="app"]') || document.querySelector('[class^="layers"]')) cancelLoadingTimer();
-        }, 3000);
-    });
 
     try {
         Object.defineProperty(navigator, 'userAgentData', {
@@ -380,7 +374,7 @@
     if (navigator.permissions) {
         const originalQuery = navigator.permissions.query;
         navigator.permissions.query = async (params) => {
-            if (params.name === 'microphone' || params.name === 'camera') return { state: 'granted' };
+            if (params.name === 'microphone' || params.name === 'camera') return { name: params.name, state: 'granted' };
             return originalQuery.call(navigator.permissions, params);
         };
     }
