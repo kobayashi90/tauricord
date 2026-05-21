@@ -7,6 +7,8 @@ jobs:
   build-linux:
     name: Build Linux
     runs-on: ubuntu-22.04
+    container:
+      image: debian:bookworm
 
     steps:
       - name: Checkout repository
@@ -14,39 +16,17 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          apt-get update
+          apt-get install -y \
             build-essential \
             curl \
             wget \
             file \
+            pkg-config \
             libssl-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
-            libglib2.0-dev \
-            libgstreamer1.0-dev \
-            libgstreamer-plugins-base1.0-dev \
-            libnice-dev \
-            libwebrtc-audio-processing-dev \
-            libunwind-dev
-
-      - name: Install WebRTC-enabled WebKitGTK
-        run: |
-          # Ubuntu's stock libwebkit2gtk-4.1-dev lacks WebRTC support.
-          # We need a build with -DENABLE_WEB_RTC=ON -DENABLE_MEDIA_STREAM=ON.
-          # Try: prebuilt .deb → build from source (slowest).
-
-          echo "Trying prebuilt .deb from GitHub..."
-          DEB_NAME="libwebkit2gtk-4.1-webrtc_2.46.6-1_amd64.deb"
-          if wget -q "https://github.com/${{ github.repository }}/releases/latest/download/$DEB_NAME" -O "/tmp/$DEB_NAME" 2>/dev/null; then
-            sudo dpkg -i "/tmp/$DEB_NAME"
-            sudo ldconfig
-            echo "WebKitGTK installed from prebuilt .deb"
-            exit 0
-          fi
-
-          echo "Prebuilt .deb not found, building from source (this will take ~45 min)..."
-          bash scripts/build-webkit-webrtc.sh
+            libwebkit2gtk-4.1-dev
 
       - name: Set up Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@stable

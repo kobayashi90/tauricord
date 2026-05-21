@@ -188,14 +188,8 @@ fn check_webrtc_support() {
       println!("cargo:warning=These are required for WebRTC support in WebKitGTK.");
       println!("cargo:warning=");
       println!("cargo:warning=Option 1: Use the Flatpak build (GNOME 48 runtime has WebRTC)");
-      println!("cargo:warning=Option 2: Add the WebKit PPA and reinstall dependencies:");
-      println!("cargo:warning=  sudo add-apt-repository ppa:webkit-team/ppa");
-      println!("cargo:warning=  sudo apt-get update");
-      println!("cargo:warning=  sudo apt-get install libwebkit2gtk-4.1-dev libgstreamer1.0-dev libnice-dev libwebrtc-audio-processing-dev");
-      println!("cargo:warning=Option 3: Install prebuilt WebKit .deb from GitHub Releases:");
-      println!("cargo:warning=  bash scripts/install-webrtc-webkit.sh");
-      println!("cargo:warning=Option 4: Build WebKitGTK with WebRTC from source (slow):");
-      println!("cargo:warning=  bash scripts/build-webkit-webrtc.sh");
+      println!("cargo:warning=Option 2: Use Debian 12+ which ships WebRTC-enabled WebKitGTK:");
+      println!("cargo:warning=  apt-get install libwebkit2gtk-4.1-dev");
       println!("cargo:warning=");
       println!("cargo:warning=Voice will not work without WebRTC-enabled WebKitGTK.");
       println!("cargo:warning=");
