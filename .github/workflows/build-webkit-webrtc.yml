@@ -100,6 +100,7 @@ jobs:
             --conflicts="libwebkit2gtk-4.1-0,libwebkit2gtk-4.1-dev,libjavascriptcoregtk-4.1-0,libjavascriptcoregtk-4.1-dev" \
             --replaces="libwebkit2gtk-4.1-0,libwebkit2gtk-4.1-dev,libjavascriptcoregtk-4.1-0,libjavascriptcoregtk-4.1-dev" \
             --requires="libc6,libglib2.0-0,libgtk-4-1,libsoup-3.0-0,libgstreamer1.0-0,libnice10,libwebrtc-audio-processing1,libepoxy0,libharfbuzz0b,libcairo2,libpng16-16,libjpeg62-turbo,libwebp7,libxml2,libxslt1.1,libsqlite3-0,libpango-1.0-0,libgdk-pixbuf-2.0-0,liblcms2-2,libseccomp2,libsystemd0,libtasn1-6,libgcrypt20,libsecret-1-0,libssl3,libfontconfig1,libfreetype6,libatk-bridge2.0-0,libepoxy0,libwpebackend-fdo-1.0-0,libgudev-1.0-0,gstreamer1.0-plugins-good,gstreamer1.0-plugins-bad" \
+            --pakdir=/tmp \
             ninja -C /tmp/webkitgtk-src/build install
 
       - name: Rename .deb
