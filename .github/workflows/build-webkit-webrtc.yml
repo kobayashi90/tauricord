@@ -41,7 +41,7 @@ jobs:
             libwebrtc-audio-processing-dev \
             gobject-introspection libgirepository1.0-dev gi-docgen \
             gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
-            libunwind-dev
+            libunwind-dev gettext
 
       - name: Extract version
         id: version

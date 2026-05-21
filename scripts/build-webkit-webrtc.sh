@@ -88,7 +88,9 @@ sudo apt-get install -y \
     libgirepository1.0-dev \
     gi-docgen \
     gstreamer1.0-plugins-good \
-    gstreamer1.0-plugins-bad
+    gstreamer1.0-plugins-bad \
+    libunwind-dev \
+    gettext
 
 echo "==> Downloading WebKitGTK $WEBKIT_VERSION..."
 cd /tmp
