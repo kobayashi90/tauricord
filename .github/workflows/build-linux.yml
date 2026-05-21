@@ -28,7 +28,10 @@ jobs:
             librsvg2-dev \
             libwebkit2gtk-4.1-dev \
             libgstreamer-plugins-bad1.0-dev \
-            libnice-dev
+            libnice-dev \
+            gstreamer1.0-plugins-bad \
+            libnice10 \
+            libwebrtc-audio-processing1
 
       - name: Set up Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@stable
