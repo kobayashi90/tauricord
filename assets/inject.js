@@ -247,16 +247,9 @@
         }, 3000);
     });
 
-    Object.defineProperty(navigator, 'userAgentData', {
-        get: () => ({
-            brands: [
-                { brand: "Chromium", version: "131" },
-                { brand: "Google Chrome", version: "131" },
-                { brand: "Not_A Brand", version: "24" }
-            ],
-            mobile: false,
-            platform: "Linux",
-            getHighEntropyValues: async () => ({
+    try {
+        Object.defineProperty(navigator, 'userAgentData', {
+            get: () => ({
                 brands: [
                     { brand: "Chromium", version: "131" },
                     { brand: "Google Chrome", version: "131" },
@@ -264,19 +257,43 @@
                 ],
                 mobile: false,
                 platform: "Linux",
-                platformVersion: "6.1.0",
-                architecture: "x86",
-                bitness: "64",
-                model: "",
-                uaFullVersion: "131.0.0.0",
-                fullVersionList: [
-                    { brand: "Chromium", version: "131.0.0.0" },
-                    { brand: "Google Chrome", version: "131.0.0.0" },
-                    { brand: "Not_A Brand", version: "24.0.0.0" }
-                ]
-            })
-        })
-    });
+                getHighEntropyValues: async () => ({
+                    brands: [
+                        { brand: "Chromium", version: "131" },
+                        { brand: "Google Chrome", version: "131" },
+                        { brand: "Not_A Brand", version: "24" }
+                    ],
+                    mobile: false,
+                    platform: "Linux",
+                    platformVersion: "6.1.0",
+                    architecture: "x86",
+                    bitness: "64",
+                    model: "",
+                    uaFullVersion: "131.0.0.0",
+                    fullVersionList: [
+                        { brand: "Chromium", version: "131.0.0.0" },
+                        { brand: "Google Chrome", version: "131.0.0.0" },
+                        { brand: "Not_A Brand", version: "24.0.0.0" }
+                    ]
+                })
+            }),
+            configurable: true
+        });
+    } catch (_) {}
+
+    try {
+        Object.defineProperty(navigator, 'vendor', {
+            get: () => "Google Inc.",
+            configurable: true
+        });
+    } catch (_) {}
+
+    try {
+        Object.defineProperty(navigator, 'platform', {
+            get: () => "Linux x86_64",
+            configurable: true
+        });
+    } catch (_) {}
 
     const pageLoadStartMs = (() => {
         const fromTimeOrigin = Number(performance?.timeOrigin);
