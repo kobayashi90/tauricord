@@ -337,8 +337,8 @@
         window.RTCSessionDescription = window.webkitRTCSessionDescription;
         window.RTCIceCandidate = window.webkitRTCIceCandidate;
     }
-
     document.addEventListener('contextmenu', (e) => {
+        if (e.defaultPrevented) return;
         const el = e.target.closest('input, textarea, [contenteditable]');
         if (el && (el instanceof HTMLInputElement
             || el instanceof HTMLTextAreaElement
@@ -346,7 +346,7 @@
             return;
         }
         e.preventDefault();
-    }, true);
+    });
 
     const style = document.createElement('style');
     style.textContent = `
