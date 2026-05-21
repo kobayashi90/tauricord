@@ -103,10 +103,8 @@ jobs:
             --pakdir=/tmp \
             ninja -C /tmp/webkitgtk-src/build install
 
-      - name: Rename .deb
-        run: |
-          mv /tmp/libwebkit2gtk-4.1-webrtc_*.deb \
-             libwebkit2gtk-4.1-webrtc_2.46.6-1_amd64.deb
+      - name: Copy .deb to workspace
+        run: sudo cp /tmp/libwebkit2gtk-4.1-webrtc_2.46.6-1_amd64.deb .
 
       - name: Upload .deb as artifact
         uses: actions/upload-artifact@v4
