@@ -71,6 +71,8 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Build Tauri app for Linux
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
         run: cargo tauri build
 
       - name: Upload Linux artifacts
