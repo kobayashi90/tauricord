@@ -192,7 +192,9 @@ fn check_webrtc_support() {
       println!("cargo:warning=  sudo add-apt-repository ppa:webkit-team/ppa");
       println!("cargo:warning=  sudo apt-get update");
       println!("cargo:warning=  sudo apt-get install libwebkit2gtk-4.1-dev libgstreamer1.0-dev libnice-dev libwebrtc-audio-processing-dev");
-      println!("cargo:warning=Option 3: Build WebKitGTK with WebRTC from source:");
+      println!("cargo:warning=Option 3: Install prebuilt WebKit .deb from GitHub Releases:");
+      println!("cargo:warning=  bash scripts/install-webrtc-webkit.sh");
+      println!("cargo:warning=Option 4: Build WebKitGTK with WebRTC from source (slow):");
       println!("cargo:warning=  bash scripts/build-webkit-webrtc.sh");
       println!("cargo:warning=");
       println!("cargo:warning=Voice will not work without WebRTC-enabled WebKitGTK.");

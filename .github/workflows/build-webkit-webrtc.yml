@@ -1,0 +1,121 @@
+name: Build WebKitGTK (WebRTC)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 0"  # weekly Sunday rebuild
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build-webkit:
+    name: Build WebKitGTK with WebRTC
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake ninja-build gperf bison flex ruby-dev unifdef checkinstall \
+            libgcrypt20-dev libsecret-1-dev libssl-dev \
+            libglib2.0-dev libicu-dev libfontconfig-dev libfreetype-dev \
+            libcairo2-dev libpango1.0-dev libharfbuzz-dev libepoxy-dev \
+            libtasn1-6-dev libxml2-dev libxslt1-dev libsqlite3-dev \
+            libjpeg-dev libpng-dev libwebp-dev libopenjp2-7-dev libtiff-dev \
+            libgdk-pixbuf-2.0-dev liblcms2-dev libseccomp-dev libsystemd-dev \
+            libatk-bridge2.0-dev libx11-dev libxft-dev libxt-dev \
+            libxcomposite-dev libxdamage-dev libxrandr-dev libxrender-dev \
+            libxi-dev libxkbcommon-dev libwayland-dev wayland-protocols \
+            libegl-dev libgl-dev libgles-dev libegl1-mesa-dev libgles2-mesa-dev \
+            libgtk-3-dev libgtk-4-dev libwpebackend-fdo-1.0-dev \
+            libgudev-1.0-dev libsoup-3.0-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libgstreamer-plugins-bad1.0-dev libnice-dev \
+            libwebrtc-audio-processing-dev \
+            gobject-introspection libgirepository1.0-dev gi-docgen \
+            gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
+
+      - name: Extract version
+        id: version
+        run: echo "webkit_version=2.46.6" >> $GITHUB_OUTPUT
+
+      - name: Cache WebKit source
+        id: cache-source
+        uses: actions/cache@v4
+        with:
+          path: /tmp/webkitgtk-src
+          key: webkitgtk-src-${{ steps.version.outputs.webkit_version }}
+
+      - name: Download WebKitGTK source
+        if: steps.cache-source.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /tmp/webkitgtk-src
+          wget -qO- "https://webkitgtk.org/releases/webkitgtk-${{ steps.version.outputs.webkit_version }}.tar.xz" \
+            | tar xJ -C /tmp/webkitgtk-src --strip-components=1
+
+      - name: Configure
+        run: |
+          mkdir -p /tmp/webkitgtk-src/build
+          cmake -S /tmp/webkitgtk-src -B /tmp/webkitgtk-src/build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DPORT=GTK \
+            -DENABLE_WEB_RTC=ON \
+            -DENABLE_MEDIA_STREAM=ON \
+            -DENABLE_GAMEPAD=OFF \
+            -DENABLE_SPELLCHECK=OFF \
+            -DENABLE_JOURNALD_LOG=OFF \
+            -DUSE_AVIF=OFF \
+            -DUSE_JPEGXL=OFF \
+            -DUSE_WOFF2=OFF \
+            -DUSE_SYSTEM_MALLOC=ON \
+            -DUSE_LIBHYPHEN=OFF \
+            -DENABLE_DOCUMENTATION=OFF \
+            -DUSE_LIBBACKTRACE=OFF \
+            -DENABLE_BUBBLEWRAP_SANDBOX=OFF
+
+      - name: Build
+        run: ninja -C /tmp/webkitgtk-src/build -j$(nproc)
+
+      - name: Package as .deb
+        run: |
+          sudo checkinstall -D --install=no --fstrans=no \
+            --pkgname="libwebkit2gtk-4.1-webrtc" \
+            --pkgversion="${{ steps.version.outputs.webkit_version }}" \
+            --pkgrelease="1" \
+            --pkgarch="amd64" \
+            --pkgsource="https://webkitgtk.org/releases/webkitgtk-${{ steps.version.outputs.webkit_version }}.tar.xz" \
+            --pkglicense="LGPL-2.1+" \
+            --maintainer="tauricord" \
+            --provides="libwebkit2gtk-4.1-0,libwebkit2gtk-4.1-dev,libjavascriptcoregtk-4.1-0,libjavascriptcoregtk-4.1-dev,gir1.2-webkit2-4.1,gir1.2-javascriptcoregtk-4.1" \
+            --conflicts="libwebkit2gtk-4.1-0,libwebkit2gtk-4.1-dev,libjavascriptcoregtk-4.1-0,libjavascriptcoregtk-4.1-dev" \
+            --replaces="libwebkit2gtk-4.1-0,libwebkit2gtk-4.1-dev,libjavascriptcoregtk-4.1-0,libjavascriptcoregtk-4.1-dev" \
+            --requires="libc6,libglib2.0-0,libgtk-4-1,libsoup-3.0-0,libgstreamer1.0-0,libnice10,libwebrtc-audio-processing1,libepoxy0,libharfbuzz0b,libcairo2,libpng16-16,libjpeg62-turbo,libwebp7,libxml2,libxslt1.1,libsqlite3-0,libpango-1.0-0,libgdk-pixbuf-2.0-0,liblcms2-2,libseccomp2,libsystemd0,libtasn1-6,libgcrypt20,libsecret-1-0,libssl3,libfontconfig1,libfreetype6,libatk-bridge2.0-0,libepoxy0,libwpebackend-fdo-1.0-0,libgudev-1.0-0,gstreamer1.0-plugins-good,gstreamer1.0-plugins-bad" \
+            ninja -C /tmp/webkitgtk-src/build install
+
+      - name: Rename .deb
+        run: |
+          mv /tmp/libwebkit2gtk-4.1-webrtc_*.deb \
+             libwebkit2gtk-4.1-webrtc_2.46.6-1_amd64.deb
+
+      - name: Upload .deb as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libwebkit2gtk-4.1-webrtc
+          path: libwebkit2gtk-4.1-webrtc_2.46.6-1_amd64.deb
+
+      - name: Attach to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: libwebkit2gtk-4.1-webrtc_2.46.6-1_amd64.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
