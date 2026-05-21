@@ -339,6 +339,12 @@
     }
 
     document.addEventListener('contextmenu', (e) => {
+        const el = e.target.closest('input, textarea, [contenteditable]');
+        if (el && (el instanceof HTMLInputElement
+            || el instanceof HTMLTextAreaElement
+            || el.isContentEditable)) {
+            return;
+        }
         e.preventDefault();
     }, true);
 

@@ -1,6 +1,5 @@
 #[cfg(target_os = "windows")]
-use std::{collections::HashMap, sync::Mutex};
-use std::sync::OnceLock;
+use std::{collections::HashMap, sync::Mutex, sync::OnceLock};
 use tauri::{AppHandle, Manager};
 
 #[cfg(target_os = "windows")]
