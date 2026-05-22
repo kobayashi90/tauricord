@@ -18,7 +18,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: webkitgtk-webrtc-2.50.6.tar.gz
-          key: webkitgtk-webrtc-2.50.6-gnome48-${{ hashFiles('webkit2gtk_2.50.6.orig.tar.xz') }}
+          key: webkitgtk-webrtc-2.50.6-gnome48
 
       - name: Install Flatpak + GNOME SDK
         if: steps.cache-tarball.outputs.cache-hit != 'true'
@@ -30,11 +30,14 @@ jobs:
           flatpak install --noninteractive --user flathub \
             org.gnome.Sdk//48 org.gnome.Platform//48
 
-      - name: Prepare host build area
+      - name: Download and prepare WebKitGTK source
         if: steps.cache-tarball.outputs.cache-hit != 'true'
         run: |
           mkdir -p /tmp/wkgtk-build/{source,install}
-          tar xf webkit2gtk_2.50.6.orig.tar.xz \
+          curl -L https://webkitgtk.org/releases/webkitgtk-2.50.6.tar.xz \
+            -o /tmp/webkitgtk-2.50.6.tar.xz
+          echo "2b281abf8894ffc6172152e5660b75eeeedbe1cc43d6783d09dc79f7c865bb42  /tmp/webkitgtk-2.50.6.tar.xz" | sha256sum -c
+          tar xf /tmp/webkitgtk-2.50.6.tar.xz \
             -C /tmp/wkgtk-build/source --strip-components=1
 
       - name: Build WebKitGTK with WebRTC inside GNOME SDK
