@@ -330,6 +330,42 @@
         if (el) el.remove();
     };
 
+    const MEMORY_SAVER_ID = 'tauricord-memory-saver';
+
+    const showMemorySaver = () => {
+        if (document.getElementById(MEMORY_SAVER_ID)) return;
+        const overlay = document.createElement('div');
+        overlay.id = MEMORY_SAVER_ID;
+        overlay.style.cssText = 'position:fixed;inset:0;background:#1e1f22;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99997;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;cursor:pointer';
+        overlay.innerHTML = '<div style="font-size:32px;margin-bottom:12px;opacity:.6">⏸</div><div style="font-size:16px;color:#b5bac1;font-weight:500">Tauricord is suspended</div><div style="font-size:13px;color:#6d6f78;margin-top:6px">Click anywhere to resume</div>';
+        overlay.addEventListener('click', () => { overlay.remove(); });
+        document.body.appendChild(overlay);
+    };
+
+    const startMemorySaver = (timeoutMs) => {
+        if (!timeoutMs || timeoutMs < 60000) return;
+        let idleTimer = null;
+        const resetIdle = () => {
+            if (idleTimer) clearTimeout(idleTimer);
+            const el = document.getElementById(MEMORY_SAVER_ID);
+            if (el) el.remove();
+            idleTimer = setTimeout(showMemorySaver, timeoutMs);
+        };
+        ['mousedown','keydown','touchstart','scroll','wheel'].forEach(evt =>
+            document.addEventListener(evt, resetIdle, { passive: true, capture: true })
+        );
+        resetIdle();
+    };
+
+    (async () => {
+        try {
+            const invoke = window.__TAURI__?.core?.invoke;
+            if (!invoke) return;
+            const s = await invoke('get_settings');
+            if (s?.memory_saver_minutes > 0) startMemorySaver(s.memory_saver_minutes * 60000);
+        } catch (_) {}
+    })();
+
     try {
         Object.defineProperty(navigator, 'userAgentData', {
             get: () => ({
