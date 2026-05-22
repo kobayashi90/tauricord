@@ -81,11 +81,10 @@ jobs:
       - name: Package tarball
         if: steps.cache-tarball.outputs.cache-hit != 'true'
         run: |
+          find /tmp/wkgtk-build/install -name 'libwebkit2gtk*' -o -name 'libjavascriptcoregtk*' -o -name 'WebKitWebProcess' -o -name 'WebKitNetworkProcess' 2>/dev/null
           cd /tmp/wkgtk-build/install
           tar -czf ${{ github.workspace }}/webkitgtk-webrtc-2.50.6.tar.gz \
-            lib/libwebkit2gtk-4.1.so* \
-            lib/libjavascriptcoregtk-4.1.so* \
-            libexec/webkit2gtk-4.1/
+            $(find . \( -name 'libwebkit2gtk-4.1*' -o -name 'libjavascriptcoregtk-4.1*' -o -path '*/libexec/webkit2gtk-4.1/*' \) ! -name '*.la' ! -name '*.a')
 
       - name: Upload WebKitGTK artifact
         uses: actions/upload-artifact@v4
