@@ -30,6 +30,16 @@ finish-args:
 
 modules:
 
+  - name: webkitgtk-webrtc
+    buildsystem: simple
+    build-commands:
+      - cp -ar * /app/
+    sources:
+      - type: archive
+        path: webkitgtk-webrtc-2.50.6.tar.gz
+        only-arches:
+          - x86_64
+
   - name: tauricord
     buildsystem: simple
     build-options:

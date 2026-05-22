@@ -28,6 +28,10 @@ fn is_discord_url(url: &tauri::Url) -> bool {
         Some(host) => {
             host == "discord.com"
                 || host.ends_with(".discord.com")
+                || host == "discordapp.com"
+                || host.ends_with(".discordapp.com")
+                || host == "discordapp.net"
+                || host.ends_with(".discordapp.net")
                 || host == "hcaptcha.com"
                 || host.ends_with(".hcaptcha.com")
                 || host == "challenges.cloudflare.com"
@@ -126,10 +130,12 @@ fn build_main_window(app: &tauri::AppHandle, settings: &settings::Settings) -> t
         .on_new_window(|url, _features| {
             if is_discord_url(&url) {
                 if let Some(host) = url.host_str() {
-                    if host == "hcaptcha.com"
+                    let allowed = host == "cdn.discordapp.com"
+                        || host == "media.discordapp.net"
+                        || host == "hcaptcha.com"
                         || host.ends_with(".hcaptcha.com")
-                        || host == "challenges.cloudflare.com"
-                    {
+                        || host == "challenges.cloudflare.com";
+                    if allowed {
                         return NewWindowResponse::Allow;
                     }
                 }

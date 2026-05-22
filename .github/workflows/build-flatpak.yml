@@ -7,15 +7,103 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build Flatpak
+  build-webkitgtk-webrtc:
+    name: Build WebKitGTK + WebRTC
     runs-on: ubuntu-24.04
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - name: Cache WebKitGTK tarball
+        id: cache-tarball
+        uses: actions/cache@v4
+        with:
+          path: webkitgtk-webrtc-2.50.6.tar.gz
+          key: webkitgtk-webrtc-2.50.6-gnome48-${{ hashFiles('webkit2gtk_2.50.6.orig.tar.xz') }}
+
+      - name: Install Flatpak + GNOME SDK
+        if: steps.cache-tarball.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak
+          flatpak remote-add --if-not-exists --user flathub \
+            https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --noninteractive --user flathub \
+            org.gnome.Sdk//48 org.gnome.Platform//48
+
+      - name: Prepare host build area
+        if: steps.cache-tarball.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /tmp/wkgtk-build/{source,install}
+          tar xf webkit2gtk_2.50.6.orig.tar.xz \
+            -C /tmp/wkgtk-build/source --strip-components=1
+
+      - name: Build WebKitGTK with WebRTC inside GNOME SDK
+        if: steps.cache-tarball.outputs.cache-hit != 'true'
+        run: |
+          flatpak run \
+            --filesystem=host \
+            --command=bash \
+            org.gnome.Sdk//48 \
+            -c '
+              set -eux
+              SRC=/run/host/tmp/wkgtk-build/source
+              INST=/run/host/tmp/wkgtk-build/install
+              cmake -S "$SRC" -B "$SRC/build" -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_INSTALL_PREFIX="$INST" \
+                -DPORT=GTK \
+                -DUSE_GTK4=OFF \
+                -DUSE_SOUP2=OFF \
+                -DENABLE_WEB_RTC=ON \
+                -DENABLE_MEDIA_STREAM=ON \
+                -DENABLE_MINIBROWSER=OFF \
+                -DENABLE_DOCUMENTATION=OFF \
+                -DENABLE_INTROSPECTION=OFF \
+                -DENABLE_GAMEPAD=OFF \
+                -DENABLE_SPELLCHECK=OFF \
+                -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
+                -DENABLE_SPEECH_SYNTHESIS=OFF \
+                -DENABLE_WEBDRIVER=OFF \
+                -DUSE_AVIF=OFF \
+                -DUSE_JPEGXL=OFF \
+                -DUSE_WOFF2=OFF \
+                -DUSE_LCMS=OFF \
+                -DUSE_LIBBACKTRACE=OFF \
+                -DUSE_SYSTEM_MALLOC=ON
+              ninja -C "$SRC/build" -j$(nproc)
+              ninja -C "$SRC/build" install
+            '
+
+      - name: Package tarball
+        if: steps.cache-tarball.outputs.cache-hit != 'true'
+        run: |
+          cd /tmp/wkgtk-build/install
+          tar -czf ${{ github.workspace }}/webkitgtk-webrtc-2.50.6.tar.gz \
+            lib/libwebkit2gtk-4.1.so* \
+            lib/libjavascriptcoregtk-4.1.so* \
+            libexec/webkit2gtk-4.1/
+
+      - name: Upload WebKitGTK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: webkitgtk-webrtc
+          path: webkitgtk-webrtc-2.50.6.tar.gz
+          retention-days: 90
+
+  build-flatpak:
+    name: Build Tauricord Flatpak
+    needs: build-webkitgtk-webrtc
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Download WebKitGTK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: webkitgtk-webrtc
+          path: .
 
       - name: Install Flatpak + flatpak-builder
         run: |
@@ -86,5 +174,3 @@ jobs:
           name: Tauricord-v${{ steps.version.outputs.version }}.flatpak
           path: Tauricord-v${{ steps.version.outputs.version }}.flatpak
           if-no-files-found: error
-
-
