@@ -516,7 +516,27 @@
     }
 
     if (typeof window.RTCPeerConnection !== 'function' && typeof window.webkitRTCPeerConnection !== 'function') {
-        console.warn('[Voice] WebRTC not available — WebKitGTK was compiled without -DENABLE_WEB_RTC. Discord voice will not work.');
+        console.warn('[Voice] WebRTC not available — WebKitGTK was compiled without WebRTC.');
+        const showWebrtcHelp = async () => {
+            try {
+                const invoke = window.__TAURI__?.core?.invoke;
+                if (!invoke) return;
+                const help = await invoke('get_webrtc_help');
+                if (!help) return;
+                const el = document.createElement('div');
+                el.style.cssText = 'position:fixed;bottom:24px;right:24px;max-width:480px;background:#1e1f22;color:#dbdee1;padding:16px 20px;border-radius:10px;font-size:12px;line-height:1.5;z-index:99999;box-shadow:0 8px 24px rgba(0,0,0,.5);border:1px solid #2b2d31;font-family:monospace;white-space:pre-wrap';
+                el.textContent = help;
+                const close = document.createElement('button');
+                close.textContent = '✕';
+                close.style.cssText = 'position:absolute;top:8px;right:8px;background:none;border:none;color:#949ba4;cursor:pointer;font-size:14px';
+                close.onclick = () => el.remove();
+                el.prepend(close);
+                el.querySelector('button')?.after(document.createElement('br'));
+                document.body.appendChild(el);
+                setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 30000);
+            } catch (_) {}
+        };
+        showWebrtcHelp();
     }
 
     console.info('[Voice] runtime capability snapshot', {

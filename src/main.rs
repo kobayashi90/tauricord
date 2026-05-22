@@ -7,6 +7,9 @@ mod settings;
 mod settings_window;
 mod theme;
 
+#[cfg(target_os = "linux")]
+mod webrtc_linux;
+
 use std::sync::Mutex;
 use tauri::{
     WebviewUrl, WebviewWindowBuilder, Manager,
@@ -62,6 +65,18 @@ fn save_settings(
 ) -> Result<(), String> {
     *state.0.lock().map_err(|e| e.to_string())? = new_settings.clone();
     new_settings.save(&app)
+}
+
+#[tauri::command]
+fn get_webrtc_help() -> Option<&'static str> {
+    #[cfg(target_os = "linux")]
+    {
+        return webrtc_linux::webrtc_help_text();
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        None
+    }
 }
 
 #[tauri::command]
@@ -157,6 +172,7 @@ fn main() {
             get_settings,
             save_settings,
             set_presence,
+            get_webrtc_help,
         ])
         .setup(|app| {
             let settings = settings::Settings::load(app.handle());
@@ -237,6 +253,11 @@ fn main() {
 
             #[cfg(target_os = "windows")]
             platform::set_window_icon(&main_window);
+
+            #[cfg(target_os = "linux")]
+            if let Err(e) = webrtc_linux::setup_webrtc(&main_window) {
+                log::error!("[WebRTC] Setup failed: {e}");
+            }
 
             #[cfg(debug_assertions)]
             main_window.open_devtools();

@@ -6,12 +6,18 @@
   "remote": {
     "urls": [
       "https://discord.com/*",
-      "https://*.discord.com/*"
+      "https://*.discord.com/*",
+      "wss://*.discord.com/*",
+      "wss://*.discord.media/*",
+      "https://*.discord.media/*",
+      "https://*.discordapp.net/*",
+      "wss://*.discordapp.net/*"
     ]
   },
   "windows": [
     "main",
-    "about"
+    "about",
+    "settings"
   ],
   "permissions": [
     "core:default",
