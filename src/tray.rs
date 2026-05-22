@@ -11,10 +11,11 @@ pub fn setup_tray(app: &AppHandle, main_window: &WebviewWindow) -> Result<(), Bo
     let toggle_item = MenuItem::with_id(app, "toggle", "Hide Tauricord", true, None::<&str>)?;
     let settings_item = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
     let update_item = MenuItem::with_id(app, "check_update", "Check for Updates", true, None::<&str>)?;
+    let devtools_item = MenuItem::with_id(app, "devtools", "Toggle DevTools", true, None::<&str>)?;
     let about_item = MenuItem::with_id(app, "about", "About", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
     let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&toggle_item, &settings_item, &update_item, &about_item, &separator, &quit_item])?;
+    let menu = Menu::with_items(app, &[&toggle_item, &settings_item, &update_item, &devtools_item, &about_item, &separator, &quit_item])?;
 
     let icon = Image::from_bytes(include_bytes!("../icons/icon.png"))?;
 
@@ -56,6 +57,9 @@ pub fn setup_tray(app: &AppHandle, main_window: &WebviewWindow) -> Result<(), Bo
                             }
                         });
                     });
+                }
+                "devtools" => {
+                    let _ = window.as_ref().open_devtools();
                 }
                 "about" => {
                     about::show_about_window(app_handle);

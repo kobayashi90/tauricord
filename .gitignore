@@ -10,4 +10,9 @@ target/
 repo/
 build-dir/
 dist/
+Console.txt
+webkit2gtk*.tar.xz*
+webkit2gtk_*.dsc
+webkit2gtk_*.debian.tar.xz
+webkit2gtk-*/
 

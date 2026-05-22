@@ -26,7 +26,14 @@
     },
     "linux": {
       "deb": {
-        "desktopTemplate": "assets/io.tauricord.dev.desktop"
+        "desktopTemplate": "assets/io.tauricord.dev.desktop",
+        "depends": [],
+        "recommends": [
+          "gstreamer1.0-plugins-bad",
+          "libnice10",
+          "libwebrtc-audio-processing1"
+        ],
+        "postInstallScript": "scripts/postinst.sh"
       }
     }
   }

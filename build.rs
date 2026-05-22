@@ -165,6 +165,20 @@ fn render_badge_png(count: i32) -> Vec<u8> {
   png_bytes
 }
 
+fn detect_distro() -> Option<(String, String)> {
+  let os_release = std::fs::read_to_string("/etc/os-release").ok()?;
+  let mut id = None;
+  let mut version_id = None;
+  for line in os_release.lines() {
+    if let Some(val) = line.strip_prefix("ID=") {
+      id = Some(val.trim_matches('"').to_lowercase());
+    } else if let Some(val) = line.strip_prefix("VERSION_ID=") {
+      version_id = Some(val.trim_matches('"').to_string());
+    }
+  }
+  Some((id?, version_id?))
+}
+
 fn check_webrtc_support() {
   #[cfg(target_os = "linux")]
   {
@@ -181,17 +195,57 @@ fn check_webrtc_support() {
       .copied()
       .collect();
 
+    let distro_hint: Option<String> = detect_distro().and_then(|(id, ver)| {
+      match (id.as_str(), ver.as_str()) {
+        ("ubuntu", v) if v.starts_with("22") => Some(format!(
+          "Ubuntu 22.04 needs the WebRTC PPA (Ubuntu-only, won't work on Debian):\n  sudo add-apt-repository ppa:escalion/ppa-webkit2gtk-experimental\n  sudo apt update && sudo apt install libwebkit2gtk-4.1-dev"
+        )),
+        ("ubuntu", v) if v.starts_with("24") => None,
+        ("ubuntu", v) => Some(format!(
+          "Ubuntu {v} may need the WebRTC PPA (Ubuntu-only, won't work on Debian):\n  sudo add-apt-repository ppa:escalion/ppa-webkit2gtk-experimental\n  sudo apt update && sudo apt install libwebkit2gtk-4.1-dev"
+        )),
+        ("debian", v) if v.starts_with("12") => Some(
+          "Debian 12 stock WebKitGTK 2.50.x lacks WebRTC. Options:\n  (1) Debian experimental (risky):\n      echo 'deb http://deb.debian.org/debian experimental main' >> /etc/apt/sources.list\n      apt update && apt install -t experimental libwebkit2gtk-4.1-dev\n  (2) Flatpak build (bundles WebRTC):\n      Use '--bundles flatpak' instead of '--bundles deb'\n  (3) Use the distro-agnostic AppImage".into(),
+        ),
+        ("debian", _) => Some(
+          "Debian stock WebKitGTK may lack WebRTC. Options:\n  Install from experimental, use the Flatpak build, or the AppImage.".into(),
+        ),
+        ("arch", _) => Some("Arch Linux:\n  yay -S webkitgtk-4.1-webrtee".into()),
+        ("fedora", _) => Some("Fedora:\n  sudo dnf copr enable grul/LibWebKit\n  sudo dnf install webkitgtk".into()),
+        ("nixos", _) => Some("NixOS:\n  webkitgtk.override { enableWebRTC = true; }".into()),
+        _ => None,
+      }
+    });
+
+    let missing_runtime = ["gstreamer-webrtc-1.0", "nice"]
+      .iter()
+      .filter(|module| {
+        Command::new("pkg-config").args(["--exists", module]).status().map(|s| !s.success()).unwrap_or(true)
+      })
+      .copied()
+      .collect::<Vec<&str>>();
+
     if !missing.is_empty() {
       println!("cargo:warning=");
       println!("cargo:warning=== Discord voice requires WebRTC-enabled WebKitGTK ===");
-      println!("cargo:warning=Missing dependencies: {}", missing.join(", "));
-      println!("cargo:warning=These are required for WebRTC support in WebKitGTK.");
+      println!("cargo:warning=Missing build deps: {}", missing.join(", "));
       println!("cargo:warning=");
-      println!("cargo:warning=On Debian 12+, install WebRTC-enabled WebKitGTK and runtime deps:");
-      println!("cargo:warning=  apt-get install libwebkit2gtk-4.1-dev gstreamer1.0-plugins-bad libnice10 libwebrtc-audio-processing1");
-      println!("cargo:warning=Or use the Flatpak build which bundles everything.");
+      println!("cargo:warning=WebKitGTK must have WebRTC compiled in at build time.");
+      println!("cargo:warning=Ubuntu 24.04+ ships WebRTC-enabled WebKitGTK. Debian 12 stock does NOT.");
+      println!("cargo:warning=The Ubuntu PPA (ppa:escalion/ppa-webkit2gtk-experimental) is Ubuntu-only;");
+      if let Some(hint) = distro_hint.as_deref() {
+        println!("cargo:warning={hint}");
+      }
+      println!("cargo:warning=");
+      println!("cargo:warning=Runtime deps (install alongside the .deb):");
+      println!("cargo:warning=  sudo apt install gstreamer1.0-plugins-bad libnice10 libwebrtc-audio-processing1");
       println!("cargo:warning=");
       println!("cargo:warning=Voice will not work without WebRTC-enabled WebKitGTK.");
+      println!("cargo:warning=");
+    } else if !missing_runtime.is_empty() {
+      println!("cargo:warning=");
+      println!("cargo:warning=Build deps found, but runtime packages may be missing:");
+      println!("cargo:warning=  sudo apt install gstreamer1.0-plugins-bad libnice10 libwebrtc-audio-processing1");
       println!("cargo:warning=");
     }
   }

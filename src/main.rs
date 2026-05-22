@@ -94,14 +94,16 @@ fn set_presence(app: tauri::AppHandle, game: Option<String>, in_voice: bool) -> 
 }
 
 fn build_main_window(app: &tauri::AppHandle, settings: &settings::Settings) -> tauri::WebviewWindow {
-    let url = WebviewUrl::External(
-        DISCORD_URL.parse().expect("hardcoded Discord URL should be valid"),
+    // Start with about:blank so WebKit settings (WebRTC etc.) can be applied
+    // before the Discord page creates its JS context.
+    let blank = WebviewUrl::External(
+        "about:blank".parse().expect("hardcoded URL should be valid"),
     );
 
     let geom = &settings.window_geometry;
     let (w, h) = if geom.width < 200.0 { (800.0, 600.0) } else { (geom.width, geom.height) };
 
-    let win = WebviewWindowBuilder::new(app, "main", url)
+    let win = WebviewWindowBuilder::new(app, "main", blank)
         .title("Tauricord")
         .inner_size(w, h);
 
@@ -185,6 +187,8 @@ fn main() {
 
             let main_window = build_main_window(app.handle(), &settings);
 
+            // Set up event handlers, watchers, and shortcuts before navigation
+            // so they're in place when Discord loads.
             main_window.on_window_event({
                 let app_handle = app.handle().clone();
                 let window = main_window.clone();
@@ -254,17 +258,26 @@ fn main() {
             #[cfg(target_os = "windows")]
             platform::set_window_icon(&main_window);
 
-            #[cfg(target_os = "linux")]
-            if let Err(e) = webrtc_linux::setup_webrtc(&main_window) {
-                log::error!("[WebRTC] Setup failed: {e}");
-            }
-
             #[cfg(debug_assertions)]
             main_window.open_devtools();
 
             #[cfg(feature = "with-tray")]
             if let Err(error) = tray::setup_tray(app.handle(), &main_window) {
                 log::error!("Failed to setup tray: {error}");
+            }
+
+            // Now set up WebRTC and navigate to Discord. Must be last so
+            // WebKit settings are applied before the page's JS context is
+            // created — the navigation happens inside with_webview().
+            #[cfg(target_os = "linux")]
+            if let Err(e) = webrtc_linux::setup_webrtc(&main_window, DISCORD_URL) {
+                log::error!("[WebRTC] Setup failed: {e}");
+            }
+            #[cfg(not(target_os = "linux"))]
+            {
+                let discord_url = DISCORD_URL.parse()
+                    .expect("hardcoded Discord URL should be valid");
+                let _ = main_window.navigate(discord_url);
             }
 
             Ok(())
