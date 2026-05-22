@@ -34,7 +34,7 @@ jobs:
           git push origin v${{ steps.version.outputs.version }} || true
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: Tauricord v${{ steps.version.outputs.version }}
@@ -51,31 +51,15 @@ jobs:
             - Voice chat support (Linux with session-bus permissions)
             
             ## Download
-            - **Windows**: `Tauricord_${{ steps.version.outputs.version }}_x64-setup.exe`
-            - **Linux (deb)**: `tauricord_${{ steps.version.outputs.version }}_0_amd64.deb`
-            - **Flatpak**: `Tauricord_v${{ steps.version.outputs.version }}.flatpak`
-            
-            ## Installation
             
             ### Windows
-            Download and run the NSIS installer.
+            `Tauricord_${{ steps.version.outputs.version }}_x64-setup.exe`
             
-            ### Linux (Debian/Ubuntu)
-            ```bash
-            sudo dpkg -i tauricord_*.deb
-            ```
-            
-            ### Linux (Arch/EndeavourOS)
-            ```bash
-            git clone https://github.com/kobayashi90/tauricord.git
-            cd tauricord
-            makepkg -si
-            ```
+            ### Linux (deb)
+            `tauricord_${{ steps.version.outputs.version }}_0_amd64.deb`
             
             ### Flatpak
-            ```bash
-            flatpak install Tauricord_v*.flatpak
-            ```
+            `Tauricord_v${{ steps.version.outputs.version }}.flatpak` (built automatically from tag)
           draft: false
           prerelease: false
         env:

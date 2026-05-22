@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.tauricord.dev</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>Unlicense</project_license>
+  <name>Tauricord</name>
+  <summary>A lightweight desktop wrapper for the Discord Web App</summary>
+  <description>
+    <p>
+      Tauricord wraps the Discord web app in a native Tauri window, providing
+      better OS integration, system tray support, and lower resource usage
+      compared to the Electron-based Discord desktop client.
+    </p>
+    <p>Features include:</p>
+    <ul>
+      <li>System tray with close-to-tray, unread badge, and presence sync</li>
+      <li>Launch on boot and start minimized</li>
+      <li>Custom CSS support with live file watcher</li>
+      <li>Memory saver mode after configurable idle time</li>
+      <li>Voice chat via WebRTC (WebKitGTK with GStreamer)</li>
+      <li>Global hotkeys (Ctrl+Shift+M to mute, Ctrl+Shift+D to deafen)</li>
+      <li>External link interception — opens in system browser</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">io.tauricord.dev.desktop</launchable>
+  <url type="homepage">https://github.com/kobayashi90/tauricord</url>
+  <url type="bugtracker">https://github.com/kobayashi90/tauricord/issues</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/kobayashi90/tauricord/main/assets/screenshot.png</image>
+    </screenshot>
+  </screenshots>
+  <categories>
+    <category>Network</category>
+    <category>InstantMessaging</category>
+    <category>Chat</category>
+  </categories>
+  <keywords>
+    <keyword>discord</keyword>
+    <keyword>chat</keyword>
+    <keyword>voice</keyword>
+  </keywords>
+  <releases>
+    <release version="0.6.0" date="2025-05-01"/>
+  </releases>
+  <content_rating type="oars-1.1"/>
+  <custom>
+    <value key="Purple::Application">Tauricord</value>
+  </custom>
+</component>

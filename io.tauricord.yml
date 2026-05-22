@@ -22,6 +22,8 @@ finish-args:
   - --talk-name=org.freedesktop.portal.Desktop
   - --talk-name=org.freedesktop.portal.Camera
   - --talk-name=org.freedesktop.portal.Microphone
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=com.canonical.indicator.appmenu
   - --env=GDK_SCALE=1
   - --env=GTK3_MODULES=
   - --env=WEBKIT_DISABLE_DMABUF_RENDERER=1
@@ -38,10 +40,11 @@ modules:
         CARGO_HOME: /run/build/tauricord/cargo
         PKG_CONFIG_PATH: /app/lib/pkgconfig:/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig
     build-commands:
-      - cargo build --release --no-default-features
+      - cargo build --release --features with-tray
       - install -Dm755 target/release/tauricord /app/bin/tauricord
       - install -Dm644 icons/icon.png /app/share/icons/hicolor/256x256/apps/io.tauricord.dev.png
       - install -Dm644 assets/io.tauricord.dev.desktop /app/share/applications/io.tauricord.dev.desktop
+      - install -Dm644 assets/io.tauricord.dev.metainfo.xml /app/share/metainfo/io.tauricord.dev.metainfo.xml
     sources:
       - type: dir
         path: .
