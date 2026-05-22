@@ -64,10 +64,11 @@ jobs:
                 -DENABLE_INTROSPECTION=OFF \
                 -DENABLE_GAMEPAD=OFF \
                 -DENABLE_SPELLCHECK=OFF \
-                -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
-                -DENABLE_SPEECH_SYNTHESIS=OFF \
-                -DENABLE_WEBDRIVER=OFF \
-                -DUSE_AVIF=OFF \
+              -DUSE_SYSTEM_UNIFDEF=OFF \
+              -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
+              -DENABLE_SPEECH_SYNTHESIS=OFF \
+              -DENABLE_WEBDRIVER=OFF \
+              -DUSE_AVIF=OFF \
                 -DUSE_JPEGXL=OFF \
                 -DUSE_WOFF2=OFF \
                 -DUSE_LCMS=OFF \
