@@ -10,9 +10,13 @@
     ]
   },
   "windows": [
-    "main"
+    "main",
+    "about"
   ],
   "permissions": [
-    "core:default"
+    "core:default",
+    "global-shortcut:default",
+    "autostart:default",
+    "updater:default"
   ]
 }

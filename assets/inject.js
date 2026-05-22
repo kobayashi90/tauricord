@@ -1,4 +1,42 @@
 (function() {
+    const SPLASH_ID = 'tauricord-splash';
+
+    const showSplash = () => {
+        const check = () => {
+            if (!document.body) { setTimeout(check, 10); return; }
+            if (document.getElementById(SPLASH_ID)) return;
+            const splash = document.createElement('div');
+            splash.id = SPLASH_ID;
+            splash.style.cssText = 'position:fixed;inset:0;background:#313338;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif';
+            splash.innerHTML = '<div style="width:40px;height:40px;border:4px solid #5865f2;border-top-color:transparent;border-radius:50%;animation:ts-spin .8s linear infinite;margin-bottom:16px"></div><div style="font-size:16px;color:#b5bac1;font-weight:500">Loading Tauricord</div><style>@keyframes ts-spin{to{transform:rotate(360deg)}}</style>';
+            document.body.appendChild(splash);
+        };
+        check();
+    };
+
+    const hideSplash = () => {
+        const el = document.getElementById(SPLASH_ID);
+        if (el) {
+            el.style.transition = 'opacity .3s';
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 300);
+        }
+    };
+
+    const waitForDiscordContent = () => {
+        const interval = setInterval(() => {
+            if (document.querySelector('[class^="app"]') || document.querySelector('[class^="layers"]')) {
+                hideSplash();
+                clearInterval(interval);
+            }
+        }, 200);
+        setTimeout(() => clearInterval(interval), 30000);
+    };
+
+    showSplash();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', waitForDiscordContent);
+    else waitForDiscordContent();
+
     const invokeTauriCommand = (cmd, payload) => {
         const invoke = window.__TAURI__?.core?.invoke ?? window.__TAURI_INTERNALS__?.invoke;
         if (!invoke) {
@@ -71,11 +109,16 @@
         return null;
     };
 
+    const onStoreChange = () => {
+        syncUnreadBadge();
+        syncPresence();
+    };
+
     const subscribeToDiscordStore = (store) => {
         if (!store || typeof store.addChangeListener !== 'function' || subscribedDiscordStores.has(store)) {
             return;
         }
-        store.addChangeListener(syncUnreadBadge);
+        store.addChangeListener(onStoreChange);
         subscribedDiscordStores.add(store);
     };
 
@@ -83,12 +126,15 @@
         subscribeToDiscordStore(discordStores.guildRead);
         subscribeToDiscordStore(discordStores.relationship);
         subscribeToDiscordStore(discordStores.notificationSettings);
+        subscribeToDiscordStore(discordStores.runningGame);
+        subscribeToDiscordStore(discordStores.voiceState);
     };
 
     const resolveDiscordStores = () => {
         if (storesResolved) return discordStores;
 
-        if (discordStores.guildRead && discordStores.relationship && discordStores.notificationSettings) {
+        if (discordStores.guildRead && discordStores.relationship && discordStores.notificationSettings
+            && discordStores.runningGame && discordStores.voiceState) {
             subscribeToResolvedDiscordStores();
             storesResolved = true;
             return discordStores;
@@ -143,16 +189,30 @@
                         || typeof candidate.getDisableUnreadBadge === 'function')) {
                     discordStores.notificationSettings = candidate;
                 }
+
+                if (!discordStores.runningGame
+                    && (storeName === 'RunningGameStore'
+                        || typeof candidate.getRunningGames === 'function')) {
+                    discordStores.runningGame = candidate;
+                }
+
+                if (!discordStores.voiceState
+                    && (storeName === 'VoiceStateStore'
+                        || typeof candidate.getVoiceState === 'function')) {
+                    discordStores.voiceState = candidate;
+                }
             }
 
-            if (discordStores.guildRead && discordStores.relationship && discordStores.notificationSettings) {
+            if (discordStores.guildRead && discordStores.relationship && discordStores.notificationSettings
+                && discordStores.runningGame && discordStores.voiceState) {
                 subscribeToResolvedDiscordStores();
                 storesResolved = true;
                 return discordStores;
             }
         }
 
-        if (discordStores.guildRead && discordStores.relationship && discordStores.notificationSettings) {
+        if (discordStores.guildRead && discordStores.relationship && discordStores.notificationSettings
+            && discordStores.runningGame && discordStores.voiceState) {
             subscribeToResolvedDiscordStores();
             storesResolved = true;
             return discordStores;
@@ -180,6 +240,35 @@
         } catch (_) {
             return undefined;
         }
+    };
+
+    let lastPresence = { game: null, inVoice: false };
+
+    const syncPresence = () => {
+        const stores = resolveDiscordStores();
+        if (!stores) return;
+
+        try {
+            let gameName = null;
+            if (stores.runningGame && typeof stores.runningGame.getRunningGames === 'function') {
+                const games = stores.runningGame.getRunningGames();
+                if (Array.isArray(games) && games.length > 0) {
+                    gameName = games[0].name || null;
+                }
+            }
+
+            let inVoice = false;
+            if (stores.voiceState && typeof stores.voiceState.getVoiceState === 'function') {
+                const currentUser = window.__TAURI__?.core?.invoke ? undefined : undefined;
+                const vs = stores.voiceState.getVoiceState();
+                if (vs && vs.channelId) inVoice = true;
+            }
+
+            if (gameName === lastPresence.game && inVoice === lastPresence.inVoice) return;
+            lastPresence = { game: gameName, inVoice };
+
+            void invokeTauriCommand('set_presence', { game: gameName, inVoice }).catch(() => {});
+        } catch (_) {}
     };
 
     let lastUnreadCount = undefined;
@@ -450,12 +539,13 @@
     }
 
     document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') syncUnreadBadge();
+        if (document.visibilityState === 'visible') { syncUnreadBadge(); syncPresence(); }
     });
-    window.addEventListener('focus', syncUnreadBadge);
-    window.addEventListener('blur', syncUnreadBadge);
+    window.addEventListener('focus', () => { syncUnreadBadge(); syncPresence(); });
+    window.addEventListener('blur', () => { syncUnreadBadge(); syncPresence(); });
 
     syncUnreadBadge();
+    syncPresence();
 
     const originalOpen = window.open;
     window.open = function(url, ...args) {

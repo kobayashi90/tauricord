@@ -10,6 +10,12 @@
     "withGlobalTauri": true,
     "windows": []
   },
+  "plugins": {
+    "updater": {
+      "endpoints": ["https://github.com/kobayashi90/tauricord/releases/latest/download/updates.json"],
+      "pubkey": ""
+    }
+  },
   "bundle": {
     "active": true,
     "targets": ["deb", "nsis", "dmg", "appimage"],

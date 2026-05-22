@@ -19,9 +19,14 @@ log = "0.4"
 tauri = { version = "2", features = ["image-png", "webview-data-url", "tray-icon"] }
 tauri-plugin-log = "2"
 tauri-plugin-single-instance = "2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-autostart = { version = "2", features = [] }
+tauri-plugin-updater = "2"
 open = "5"
 urlencoding = "2"
 base64 = "0.22"
+notify = "7"
+glob = "0.3"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_Controls", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_System_LibraryLoader"] }

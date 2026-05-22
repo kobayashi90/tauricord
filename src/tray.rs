@@ -1,5 +1,5 @@
 use tauri::{
-    AppHandle, WebviewWindow, WindowEvent,
+    AppHandle, WebviewWindow,
     image::Image,
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -9,22 +9,12 @@ use crate::about;
 
 pub fn setup_tray(app: &AppHandle, main_window: &WebviewWindow) -> Result<(), Box<dyn std::error::Error>> {
     let toggle_item = MenuItem::with_id(app, "toggle", "Hide Tauricord", true, None::<&str>)?;
+    let settings_item = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
+    let update_item = MenuItem::with_id(app, "check_update", "Check for Updates", true, None::<&str>)?;
     let about_item = MenuItem::with_id(app, "about", "About", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
     let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&toggle_item, &about_item, &separator, &quit_item])?;
-
-    {
-        let window = main_window.clone();
-        let toggle_item = toggle_item.clone();
-        main_window.on_window_event(move |event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.hide();
-                let _ = toggle_item.set_text("Show Tauricord");
-            }
-        });
-    }
+    let menu = Menu::with_items(app, &[&toggle_item, &settings_item, &update_item, &about_item, &separator, &quit_item])?;
 
     let icon = Image::from_bytes(include_bytes!("../icons/icon.png"))?;
 
@@ -43,6 +33,30 @@ pub fn setup_tray(app: &AppHandle, main_window: &WebviewWindow) -> Result<(), Bo
                         let _ = toggle_item.set_text("Hide Tauricord");
                     }
                 }
+                "settings" => {
+                    crate::settings_window::show_settings_window(app_handle);
+                }
+                "check_update" => {
+                    let handle = app_handle.clone();
+                    std::thread::spawn(move || {
+                        let rt = tauri::async_runtime::handle();
+                        rt.block_on(async {
+                            use tauri_plugin_updater::UpdaterExt;
+                            match handle.updater() {
+                                Ok(updater) => match updater.check().await {
+                                    Ok(Some(update)) => {
+                                        let msg = format!("Update v{} available", update.version);
+                                        let _ = handle.tray_by_id("main")
+                                            .and_then(|t| t.set_tooltip(Some(&msg)).ok());
+                                    }
+                                    Ok(None) => {}
+                                    Err(e) => log::error!("Update check failed: {e}"),
+                                },
+                                Err(e) => log::error!("Updater error: {e}"),
+                            }
+                        });
+                    });
+                }
                 "about" => {
                     about::show_about_window(app_handle);
                 }
@@ -54,7 +68,7 @@ pub fn setup_tray(app: &AppHandle, main_window: &WebviewWindow) -> Result<(), Bo
         });
     }
 
-    let _tray = TrayIconBuilder::new()
+    let _tray = TrayIconBuilder::with_id("main")
         .icon(icon)
         .tooltip("Tauricord")
         .menu(&menu)
