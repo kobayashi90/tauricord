@@ -1,9 +1,9 @@
 app-id: io.tauricord.dev
 runtime: org.gnome.Platform
-runtime-version: "48"
+runtime-version: "50"
 sdk: org.gnome.Sdk
 sdk-extensions:
-  - org.freedesktop.Sdk.Extension.rust-stable
+  - org.freedesktop.Sdk.Extension.rust-stable//25.08
 command: tauricord
 
 finish-args:
@@ -22,12 +22,17 @@ finish-args:
   - --talk-name=org.freedesktop.portal.Camera
   - --talk-name=org.freedesktop.portal.Microphone
   - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.ayatana.indicator.application
+  - --talk-name=com.canonical.indicator.application
   - --talk-name=com.canonical.indicator.appmenu
+  - --talk-name=com.canonical.AppMenu.Registrar
   - --env=GDK_SCALE=1
   - --env=GTK3_MODULES=
   - --env=WEBKIT_DISABLE_DMABUF_RENDERER=1
 
 modules:
+
+  - shared-modules/libayatana-appindicator/libayatana-appindicator-gtk3.json
 
   - name: webkitgtk-webrtc
     buildsystem: simple
@@ -35,7 +40,7 @@ modules:
       - cp -ar * /app/
     sources:
       - type: archive
-        path: webkitgtk-webrtc-2.50.6.tar.gz
+        path: webkitgtk-webrtc-2.52.3.tar.gz
         only-arches:
           - x86_64
 

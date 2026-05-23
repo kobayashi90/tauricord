@@ -12,13 +12,15 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Cache WebKitGTK tarball
         id: cache-tarball
         uses: actions/cache@v4
         with:
-          path: webkitgtk-webrtc-2.50.6.tar.gz
-          key: webkitgtk-webrtc-2.50.6-gnome48
+          path: webkitgtk-webrtc-2.52.3.tar.gz
+          key: webkitgtk-webrtc-2.52.3-gnome50
 
       - name: Install Flatpak + GNOME SDK
         if: steps.cache-tarball.outputs.cache-hit != 'true'
@@ -28,16 +30,16 @@ jobs:
           flatpak remote-add --if-not-exists --user flathub \
             https://flathub.org/repo/flathub.flatpakrepo
           flatpak install --noninteractive --user flathub \
-            org.gnome.Sdk//48 org.gnome.Platform//48
+            org.gnome.Sdk//50 org.gnome.Platform//50
 
       - name: Download and prepare WebKitGTK source
         if: steps.cache-tarball.outputs.cache-hit != 'true'
         run: |
           mkdir -p /tmp/wkgtk-build/{source,install}
-          curl -L https://webkitgtk.org/releases/webkitgtk-2.50.6.tar.xz \
-            -o /tmp/webkitgtk-2.50.6.tar.xz
-          echo "2b281abf8894ffc6172152e5660b75eeeedbe1cc43d6783d09dc79f7c865bb42  /tmp/webkitgtk-2.50.6.tar.xz" | sha256sum -c
-          tar xf /tmp/webkitgtk-2.50.6.tar.xz \
+          curl -L https://webkitgtk.org/releases/webkitgtk-2.52.3.tar.xz \
+            -o /tmp/webkitgtk-2.52.3.tar.xz
+          echo "5b3e0d174e63dcc28848b1194e0e7448d5948c3c2427ecd931c2c5be5261aebb  /tmp/webkitgtk-2.52.3.tar.xz" | sha256sum -c
+          tar xf /tmp/webkitgtk-2.52.3.tar.xz \
             -C /tmp/wkgtk-build/source --strip-components=1
 
       - name: Build WebKitGTK with WebRTC inside GNOME SDK
@@ -46,7 +48,7 @@ jobs:
           flatpak run \
             --filesystem=/tmp/wkgtk-build:rw \
             --command=bash \
-            org.gnome.Sdk//48 \
+            org.gnome.Sdk//50 \
             -c '
               set -eux
               SRC=/tmp/wkgtk-build/source
@@ -64,11 +66,11 @@ jobs:
                 -DENABLE_INTROSPECTION=OFF \
                 -DENABLE_GAMEPAD=OFF \
                 -DENABLE_SPELLCHECK=OFF \
-              -DUSE_SYSTEM_UNIFDEF=OFF \
-              -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
-              -DENABLE_SPEECH_SYNTHESIS=OFF \
-              -DENABLE_WEBDRIVER=OFF \
-              -DUSE_AVIF=OFF \
+                -DUSE_SYSTEM_UNIFDEF=OFF \
+                -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
+                -DENABLE_SPEECH_SYNTHESIS=OFF \
+                -DENABLE_WEBDRIVER=OFF \
+                -DUSE_AVIF=OFF \
                 -DUSE_JPEGXL=OFF \
                 -DUSE_WOFF2=OFF \
                 -DUSE_LCMS=OFF \
@@ -83,14 +85,14 @@ jobs:
         run: |
           find /tmp/wkgtk-build/install -name 'libwebkit2gtk*' -o -name 'libjavascriptcoregtk*' -o -name 'WebKitWebProcess' -o -name 'WebKitNetworkProcess' 2>/dev/null
           cd /tmp/wkgtk-build/install
-          tar -czf ${{ github.workspace }}/webkitgtk-webrtc-2.50.6.tar.gz \
+          tar -czf ${{ github.workspace }}/webkitgtk-webrtc-2.52.3.tar.gz \
             $(find . \( -name 'libwebkit2gtk-4.1*' -o -name 'libjavascriptcoregtk-4.1*' -o -path '*/libexec/webkit2gtk-4.1/*' \) ! -name '*.la' ! -name '*.a')
 
       - name: Upload WebKitGTK artifact
         uses: actions/upload-artifact@v4
         with:
           name: webkitgtk-webrtc
-          path: webkitgtk-webrtc-2.50.6.tar.gz
+          path: webkitgtk-webrtc-2.52.3.tar.gz
           retention-days: 90
 
   build-flatpak:
@@ -101,6 +103,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: true
 
       - name: Download WebKitGTK artifact
         uses: actions/download-artifact@v4
@@ -120,16 +123,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.local/share/flatpak
-          key: flatpak-runtimes-${{ runner.arch }}-gnome48-2408-${{ hashFiles('io.tauricord.yml') }}
+          key: flatpak-runtimes-${{ runner.arch }}-gnome50-2508-${{ hashFiles('io.tauricord.yml') }}
           restore-keys: |
-            flatpak-runtimes-${{ runner.arch }}-gnome48-2408-
+            flatpak-runtimes-${{ runner.arch }}-gnome50-2508-
 
       - name: Install GNOME Platform + SDK + Rust extension
         run: |
           flatpak install --noninteractive --user flathub \
-            org.gnome.Platform//48 \
-            org.gnome.Sdk//48 \
-            org.freedesktop.Sdk.Extension.rust-stable//24.08
+            org.gnome.Platform//50 \
+            org.gnome.Sdk//50 \
+            org.freedesktop.Sdk.Extension.rust-stable//25.08
 
       - name: Cache flatpak-builder state
         uses: actions/cache@v4
