@@ -13,7 +13,6 @@ finish-args:
   - --socket=wayland
   - --socket=fallback-x11
   - --socket=pulseaudio
-  - --socket=camera
   - --filesystem=xdg-run/pipewire-0
   - --socket=session-bus
   - --device=all
