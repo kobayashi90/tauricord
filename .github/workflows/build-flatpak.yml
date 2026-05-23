@@ -42,6 +42,11 @@ jobs:
           tar xf /tmp/webkitgtk-2.52.3.tar.xz \
             -C /tmp/wkgtk-build/source --strip-components=1
 
+      - name: Apply librice 0.4.x compatibility patch
+        if: steps.cache-tarball.outputs.cache-hit != 'true'
+        run: |
+          patch -d /tmp/wkgtk-build/source -p1 < patches/librice-compat.patch
+
       - name: Build WebKitGTK with WebRTC inside GNOME SDK
         if: steps.cache-tarball.outputs.cache-hit != 'true'
         run: |

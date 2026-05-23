@@ -1,0 +1,46 @@
+--- a/Source/WebCore/platform/rice/GRefPtrRice.h	2026-02-23 14:40:55.761299000 +0000
++++ b/Source/WebCore/platform/rice/GRefPtrRice.h	2026-05-23 08:50:05.680000000 +0000
+@@ -31,7 +31,21 @@
+ WTF_DEFINE_GREF_TRAITS_INLINE(RiceComponent, rice_component_ref, rice_component_unref)
+ WTF_DEFINE_GREF_TRAITS_INLINE(RiceUdpSocket, rice_udp_socket_ref, rice_udp_socket_unref)
+ WTF_DEFINE_GREF_TRAITS_INLINE(RiceTlsConfig, rice_tls_config_ref, rice_tls_config_unref)
+-WTF_DEFINE_GREF_TRAITS_INLINE(RiceTurnConfig, rice_turn_config_ref, rice_turn_config_unref)
++template<> struct GRefPtrDefaultRefDerefTraits<RiceTurnConfig> {
++    static inline RiceTurnConfig* refIfNotNull(RiceTurnConfig* ptr)
++    {
++        return ptr ? rice_turn_config_copy(ptr) : nullptr;
++    }
++    static inline void derefIfNotNull(RiceTurnConfig* ptr)
++    {
++        if (ptr)
++            rice_turn_config_free(ptr);
++    }
++    static inline bool isFloating(RiceTurnConfig*)
++    {
++        return false;
++    }
++};
+ WTF_DEFINE_GREF_TRAITS_INLINE(RiceTcpListener, rice_tcp_listener_ref, rice_tcp_listener_unref)
+ 
+ } // namespace WTF
+--- a/Source/WebCore/Modules/mediastream/gstreamer/GStreamerIceAgent.cpp	2026-03-20 08:14:20.374288000 +0000
++++ b/Source/WebCore/Modules/mediastream/gstreamer/GStreamerIceAgent.cpp	2026-05-23 08:50:16.316000000 +0000
+@@ -260,13 +260,11 @@
+ 
+     auto family = rice_address_get_family(riceAddress.get());
+     for (unsigned i = 0; i < nRelay; i++) {
+-        // FIXME: Hardcoding UDP as allocation transport type for now. Our TURN support needs further work anyway.
+-        // https://bugs.webkit.org/show_bug.cgi?id=310005
+-        auto config = adoptGRef(rice_turn_config_new(relays[i], riceAddress.get(), credentials.get(),
+-#if RICE_CHECK_VERSION(0, 3, 0)
+-            RICE_TRANSPORT_TYPE_UDP,
+-#endif
+-            1, &family, tlsConfig.get()));
++        auto config = adoptGRef(rice_turn_config_new(relays[i], riceAddress.get(), credentials.get()));
++        rice_turn_config_set_allocation_transport(config.get(), RICE_TRANSPORT_TYPE_UDP);
++        rice_turn_config_add_address_family(config.get(), family);
++        if (tlsConfig)
++            rice_turn_config_set_tls_config(config.get(), tlsConfig.get());
+         agent->priv->turnConfigs.append(WTF::move(config));
+     }
+ }
