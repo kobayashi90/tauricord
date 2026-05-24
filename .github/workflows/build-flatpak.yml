@@ -127,14 +127,6 @@ jobs:
       - name: Add Flathub remote
         run: sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-      - name: Cache Flatpak runtimes
-        uses: actions/cache@v4
-        with:
-          path: /var/lib/flatpak
-          key: flatpak-runtimes-${{ runner.arch }}-gnome50-2508-${{ hashFiles('io.tauricord.yml') }}
-          restore-keys: |
-            flatpak-runtimes-${{ runner.arch }}-gnome50-2508-
-
       - name: Install GNOME Platform + SDK
         run: |
           sudo flatpak install --noninteractive flathub \
