@@ -487,8 +487,6 @@
     const style = document.createElement('style');
     style.textContent = `
         div[class^='base'] div[class^='bar_'] { display: none !important; }
-        nav[aria-label*='Servers'] [class*='listItem'] { display: flex !important; justify-content: center !important; }
-        nav[aria-label*='Servers'] [class*='wrapper_'] { transform: translateZ(0); }
     `;
     const injectCSS = () => {
         if (document.head) { document.head.appendChild(style); }
