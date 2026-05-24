@@ -27,9 +27,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y flatpak
-          flatpak remote-add --if-not-exists --user flathub \
+          sudo flatpak remote-add --if-not-exists flathub \
             https://flathub.org/repo/flathub.flatpakrepo
-          flatpak install --noninteractive --user flathub \
+          sudo flatpak install --noninteractive flathub \
             org.gnome.Sdk//50 org.gnome.Platform//50
 
       - name: Download and prepare WebKitGTK source
@@ -122,19 +122,19 @@ jobs:
           sudo apt-get install -y flatpak flatpak-builder
 
       - name: Add Flathub remote
-        run: flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
+        run: sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
       - name: Cache Flatpak runtimes
         uses: actions/cache@v4
         with:
-          path: ~/.local/share/flatpak
+          path: /var/lib/flatpak
           key: flatpak-runtimes-${{ runner.arch }}-gnome50-2508-${{ hashFiles('io.tauricord.yml') }}
           restore-keys: |
             flatpak-runtimes-${{ runner.arch }}-gnome50-2508-
 
       - name: Install GNOME Platform + SDK + Rust extension
         run: |
-          flatpak install --noninteractive --user flathub \
+          sudo flatpak install --noninteractive flathub \
             org.gnome.Platform//50 \
             org.gnome.Sdk//50 \
             org.freedesktop.Sdk.Extension.rust-stable//25.08
@@ -157,9 +157,8 @@ jobs:
 
       - name: Build Flatpak
         run: |
-          flatpak-builder \
+          sudo flatpak-builder \
             --force-clean \
-            --user \
             --repo=repo \
             --ccache \
             --disable-rofiles-fuse \
